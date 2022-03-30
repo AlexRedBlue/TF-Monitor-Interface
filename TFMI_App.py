@@ -95,8 +95,8 @@ class TFdata:
         
         
     def getfilename(self, directory, file_tag, num=0):
-        fname = self.working_dir+r"\{}\{}__{}.dat".format(directory, file_tag, num)
-        if os.path.isdir(self.working_dir+"\\"+directory) == False:
+        fname = self.current_working_dir+r"\{}\{}__{}.dat".format(directory, file_tag, num)
+        if os.path.isdir(self.current_working_dir+"\\"+directory) == False:
             os.makedirs(directory)
         if os.path.isfile(fname):
             return self.getfilename(directory, file_tag, num+1)
@@ -332,7 +332,7 @@ class tkApp(tk.Tk):
             try:
                 if self.entry_list[idx].get() != '':
                     self.params[key] = int(self.entry_list[idx].get())
-                    self.updateConfig('Frequency Sweep Settings', key, int(self.entry_list[idx].get()))
+                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
                     self.label_list[idx].config(text=key+": "+self.entry_list[idx].get())
                     self.entry_list[idx].delete(0, 'end')
             except Exception as e:
@@ -420,7 +420,8 @@ class tkApp(tk.Tk):
                         self.graph_fits()
                     if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                         self.TFdata.save_fits()
-            except:
+            except Exception as e:
+                print(e)
                 if self.run:
                     self.TFdata.save_fits()
                     self.run = False
