@@ -1,0 +1,12 @@
+__pychache__
+venv
+*.pyc
+.DS_Store
+.env
+data/*
+logging/*
+archive-data/*
+.idea
+.spyproject
+machine_learning/models/*
+machine_learning/machine_learning
