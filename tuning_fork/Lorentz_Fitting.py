@@ -15,8 +15,8 @@ def Lorentz_x(f, coeffs):
     Y = (height*f*width*(frequency**2-f**2))/((frequency**2-f**2)**2+(f*width)**2)
     return X*np.cos(phase)+Y*np.sin(phase)-(bgrgint+bgrdslp*f)
 
-# X = (height *  f**2   *      width    ) / ((f_0**2 - f**2)**2 + (f*width)**2)
-# Y = (height *  width  *  (f_0**2 - f**2) ) / ((f_0**2 - f**2)**2 + (f*width)**2)
+# X = (height *  f**2      *    width**2    ) / ((f_0**2 - f**2)**2 + (f*width)**2)
+# Y = (height *  f * width * (f_0**2 - f**2)) / ((f_0**2 - f**2)**2 + (f*width)**2)
 
 def Lorentz_y(f, coeffs):
     """Returns the out-of-phase/disperson Lorentzian curve from the array f and coefficients

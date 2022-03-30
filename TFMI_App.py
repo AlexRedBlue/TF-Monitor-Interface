@@ -52,7 +52,7 @@ class TFdata:
         self.sweep_header = None
         self.reset_sweep()
         self.reset_fits()
-        self.saved_fits = np.array([])
+        self.reset_saved_fits()
         self.reset_save_time()
 
     def get_today(self):
@@ -71,6 +71,16 @@ class TFdata:
         
     def reset_fits(self):
         self.fits = []
+    
+    def reset_saved_fits(self):
+        self.saved_fits = np.array([])
+        
+    def daily_save(self):
+        self.save_fits()
+        self.reset_save_time()
+        self.reset_fits()
+        self.reset_saved_fits()
+        self.get_today()
         
     def reset_sweep(self):
         self.sweep = []
@@ -86,9 +96,10 @@ class TFdata:
     def fit_sweep(self):
         self.sweep = np.array(self.sweep)
         if self.sweep.ndim > 1:
-            guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, 0, 0, 0]
+            guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]-self.sweep[0, 1])/8, 0, 0, 0, 0]
             xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
             xfit = np.abs(xfit)
+            print(xfit)
             yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             yfit = np.abs(yfit)
         self.append_fits([self.sweep[:, 0].mean(), self.drive, *xfit, *yfit])
@@ -420,6 +431,9 @@ class tkApp(tk.Tk):
                         self.graph_fits()
                     if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                         self.TFdata.save_fits()
+                        self.TFdata.reset_save_time()
+                    if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                        self.TFdata.daily_save()
             except Exception as e:
                 print(e)
                 if self.run:
@@ -431,7 +445,7 @@ class tkApp(tk.Tk):
         
     def stop(self):
         self.start_button.config(text="Start Sweep", command=self.start)
-        self.mainloop()
+        self.run = False
 
         
 if __name__ == "__main__":
