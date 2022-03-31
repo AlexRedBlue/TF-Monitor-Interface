@@ -114,8 +114,8 @@ class TFdata:
         
     def getfilename(self, directory, file_tag, num=0):
         fname = self.current_working_dir+r"\data\{}\{}__{}.dat".format(directory, file_tag, num)
-        if os.path.isdir(self.current_working_dir+"\\"+directory) == False:
-            os.makedirs(directory)
+        if os.path.isdir(self.current_working_dir+"\\data\\"+directory) == False:
+            os.makedirs(self.current_working_dir+"\\data\\"+directory)
         if os.path.isfile(fname):
             return self.getfilename(directory, file_tag, num+1)
         return fname
@@ -376,7 +376,7 @@ class tkApp(tk.Tk):
             self.lockin = LOCKIN.SR830("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
         else:
             print("Invalid Lock-in Instrument Type: Reset Config File")
-        if self.config["Instrument Settings"]["Signal-Gen Model"] == "Keysight":
+        if self.config["Instrument Settings"]["Signal-Gen Model"] == "Keysight" or self.config["Instrument Settings"]["Signal-Gen Model"] == "Agilent":
             self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
         else:
             print("Invalid Signal-Gen Instrument Type: Reset Config File")
@@ -467,14 +467,15 @@ class tkApp(tk.Tk):
         self.gen.Set_Frequency(self.params["Start Frequency"])
         self.after(3*self.wait_time)
         for idx, f in enumerate(frequencies):
-            self.gen.Set_Frequency(f)
-            self.after( self.wait_time)
-            Vx, Vy = self.lockin.Read_XY()
-            self.TFdata.append_sweep([time.time(), f, Vx, Vy])
-            if self.showGraph.get() == "Frequency Sweep":
-                self.graph_sweep()
-            self.update_idletasks()
-            self.update()
+            if self.run:
+                self.gen.Set_Frequency(f)
+                self.after( self.wait_time)
+                Vx, Vy = self.lockin.Read_XY()
+                self.TFdata.append_sweep([time.time(), f, Vx, Vy])
+                if self.showGraph.get() == "Frequency Sweep":
+                    self.graph_sweep()
+                self.update_idletasks()
+                self.update()
 
     def start(self):
         self.start_button.config(text="Stop", command=self.stop)
