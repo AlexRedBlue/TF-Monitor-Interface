@@ -69,6 +69,13 @@ def isStrInt(text):
     except:
         return False
     
+def isStrFloat(text):
+    try:
+        float(text)
+        return True
+    except:
+        return False
+    
 class TFdata:
     def __init__(self, TF_name, save_directory):
         self.current_working_dir = os.getcwd()
@@ -454,7 +461,13 @@ class tkApp(tk.Tk):
             self.TFdata.TF_name = self.TF_savename.get()
             self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_directory, self.TFdata.today))
             
-    
+        if isStrFloat(self.current_amp_entry.get()):
+            self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
+            self.TFdata.set_current_amp(float(self.current_amp_entry.get())) 
+        if isStrFloat(self.drive_entry.get()):
+            self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
+            self.TFdata.set_drive(float(self.drive_entry.get()))  
+
 
     def on_key_press(self, event):
         print("you pressed {}".format(event.key))

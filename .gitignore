@@ -10,3 +10,4 @@ archive-data/*
 .spyproject
 machine_learning/models/*
 machine_learning/machine_learning
+*.cfg
