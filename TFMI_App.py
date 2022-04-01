@@ -27,9 +27,37 @@ import os
 
 import time
 from datetime import datetime
+from datetime import timedelta
 
 import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
+
+def ticks_to_hours(graph, time_start, time_end):
+    new_ticks = []
+    xlabels = []
+    # time if time length of data is < 30 minutes, use 7 HH:MM:SS; otherwise 9 HH:MM
+    if (time_end - time_start)*60 < 30:
+        ticks = np.linspace(time_start, time_end, 7)
+        for idx, val in enumerate(ticks):
+            dt = str(timedelta(seconds=int(val*3600)))
+            if dt not in xlabels:
+                xlabels.append(dt)
+                new_ticks.append(val)
+    else:
+        ticks = np.linspace(time_start, time_end, 9)
+        for idx, val in enumerate(ticks):
+            dt = str(timedelta(seconds=int(val*3600))).split(":")
+            try:
+                time = float(dt[0]) + float(dt[1])/60
+            except:
+                time = val
+            dt = dt[0]+":"+dt[1]
+            if dt not in xlabels:
+                xlabels.append(dt)
+                new_ticks.append(time)
+
+    graph.set_xticks(new_ticks)
+    graph.set_xticklabels(xlabels)
 
 def close_win(top):
         top.destroy()
@@ -49,8 +77,10 @@ class TFdata:
         self.get_today()
         self.set_drive(1)
         self.set_current_amp(1)
-        self.header = None
-        self.sweep_header = None
+        x_header = "\tx:Frequency, Hz\tx:Amplitude, V\tx:Width, Hz\tx:Phase, Rad\tx:Background intercept, V\tx:Background slope, dV/df\tx:Background quadratic, d2V/d2f"
+        y_header = "\ty:Frequency, Hz\ty:Amplitude, V\ty:Width, Hz\ty:Phase, Rad\ty:Background intercept, V\ty:Background slope, dV/df\ty:Background quadratic, d2V/d2f"
+        self.header = "Time, s\tDrive, V\tCurrent Amp"+x_header+y_header
+        self.sweep_header = "Time, s\tFrequency, hz\tVx, V\tVy, V\tDrive, V\tCurrent Amp"
         self.reset_sweep()
         self.reset_fits()
         self.reset_saved_fits()
@@ -109,7 +139,9 @@ class TFdata:
             # print(xfit)
             yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             yfit = np.abs(yfit)
-        self.append_fits([self.sweep[:, 0].mean(), self.drive, *xfit, *yfit])
+        if xflag in [1,2,3,4]:
+            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *xfit, *yfit])
+        return xflag
         
         
     def getfilename(self, directory, file_tag, num=0):
@@ -150,6 +182,7 @@ class tkApp(tk.Tk):
         self.config.read('TFMI_Config.cfg')
         
         self.save_interval = 60 # in minutes
+        self.tracking_range = float(self.config["Tracking Settings"]["Range"])
         
         if self.config["Instrument Settings"]["Lock-in Model"] == "LI 5640":
             self.lockin = LOCKIN.LI5640("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
@@ -268,8 +301,10 @@ class tkApp(tk.Tk):
         
         self.config.add_section("Instrument Settings")
         self.config.set("Instrument Settings", "Lock-in Model", "LI 5640")
+        # self.config.set("Instrument Settings", "Lock-in Model", "Test")
         self.config.set("Instrument Settings", "Lock-in GPIB", "25")
         self.config.set("Instrument Settings", "Signal-Gen Model", "Keysight")
+        # self.config.set("Instrument Settings", "Signal-Gen Model", "Test")
         self.config.set("Instrument Settings", "Signal-Gen GPIB", "24")
         
         self.config.add_section("Monitor Save Settings")
@@ -279,6 +314,9 @@ class tkApp(tk.Tk):
         self.config.add_section("Monitor Checkbox Settings")
         self.config.set("Monitor Checkbox Settings", "Fitting", "1")
         self.config.set("Monitor Checkbox Settings", "Tracking", "0")
+        
+        self.config.add_section("Tracking Settings")
+        self.config.set("Tracking Settings", "Range", "6")
         
         with open('TFMI_Config.cfg', 'w') as output:
             self.config.write(output)
@@ -303,7 +341,7 @@ class tkApp(tk.Tk):
         
         # GPIB Settings
         GPIB_Label = tk.Label(sWin, text="GPIB")
-        GPIB_Label.place(x=90, y=15)
+        GPIB_Label.place(x=100, y=15)
         
         Lockin_Label = tk.Label(sWin, text="Lock In")
         Lockin_Label.place(x=15, y=35)
@@ -313,11 +351,11 @@ class tkApp(tk.Tk):
         
         self.Lockin_GPIB = tk.Entry(sWin, width=5)
         self.Lockin_GPIB.insert(0, self.config["Instrument Settings"]["Lock-in GPIB"])
-        self.Lockin_GPIB.place(anchor="nw", x=90, y=35)
+        self.Lockin_GPIB.place(anchor="nw", x=100, y=35)
         
         self.SignalGen_GPIB = tk.Entry(sWin, width=5)
         self.SignalGen_GPIB.insert(0, self.config["Instrument Settings"]["Signal-Gen GPIB"])
-        self.SignalGen_GPIB.place(anchor="nw", x=90, y=75)
+        self.SignalGen_GPIB.place(anchor="nw", x=100, y=75)
         
         self.Lockin_Model = tk.StringVar(sWin)
         self.Lockin_Model.set(self.config["Instrument Settings"]["Lock-in Model"]) # default value
@@ -332,26 +370,50 @@ class tkApp(tk.Tk):
         # Save Folder
         self.Save_Folder = tk.Entry(sWin, width=12)
         self.Save_Folder.insert(0, self.config["Monitor Save Settings"]["Save Folder"])
-        self.Save_Folder.place(anchor="nw", x=90, y=120)
+        self.Save_Folder.place(anchor="nw", x=100, y=120)
         
-        Lockin_Label = tk.Label(sWin, text="Save Folder")
-        Lockin_Label.place(x=15, y=120)
+        Folder_Label = tk.Label(sWin, text="Save Folder")
+        Folder_Label.place(x=15, y=120)
         
         # TF Name
         self.TF_savename = tk.Entry(sWin, width=12)
         self.TF_savename.insert(0, self.config["Monitor Save Settings"]["Tuning Fork Name"])
-        self.TF_savename.place(anchor="nw", x=90, y=150)
+        self.TF_savename.place(anchor="nw", x=100, y=150)
         
-        Lockin_Label = tk.Label(sWin, text="TF Name")
-        Lockin_Label.place(x=15, y=150)
+        Name_Label = tk.Label(sWin, text="TF Name")
+        Name_Label.place(x=15, y=150)
         
         next_fit_name = self.TFdata.getfilename(self.TFdata.save_directory, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
         
         self.fit_Label = tk.Label(sWin, text="Next Fit File:        "+next_fit_name)
-        self.fit_Label.place(x=15, y=180)
+        self.fit_Label.place(x=15, y=200)
         
         self.sweep_label = tk.Label(sWin, text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.config["Monitor Save Settings"]["Save Folder"], self.TFdata.today))
-        self.sweep_label.place(x=15, y=210)
+        self.sweep_label.place(x=15, y=230)
+        
+        ###### TODO #######
+        # TODO
+        # More Settings
+        
+        # Save Folder
+        self.current_amp_entry = tk.Entry(sWin, width=12)
+        self.current_amp_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        self.current_amp_entry.place(anchor="nw", x=370, y=120)
+        
+        Current_Amp_Label = tk.Label(sWin, text="Current Amp")
+        Current_Amp_Label.place(x=250, y=120)
+        
+        # TF Name
+        self.drive_entry = tk.Entry(sWin, width=12)
+        self.drive_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Drive"]))
+        self.drive_entry.place(anchor="nw", x=370, y=150)
+        
+        Drive_Label = tk.Label(sWin, text="Drive, V")
+        Drive_Label.place(x=250, y=150)
+        
+        next_fit_name = self.TFdata.getfilename(self.TFdata.save_directory, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        
+        ###### END OF TODO ######
 
         save_button = tk.Button(sWin, text='Save', command=self.save_settings)
         save_button.place(anchor="sw", x=15, y=345)
@@ -419,9 +481,24 @@ class tkApp(tk.Tk):
         self.TFdata.save_fits()
     
     def tracking(self):
-        # TODO
-        # Everything
-        pass
+        resonance = self.TF_data.fits[-1][3]
+        width = self.TF_data.fits[-1][5]
+        new_start = resonance-self.tracking_range*width
+        if new_start < 1:
+            new_start = 1
+        new_end = resonance+self.tracking_range*width
+        if new_end > 90E5:
+            new_end = 90E5
+        
+        self.params = {
+                        "Num Pts": self.params["Num Pts"],
+                        "End Frequency": new_start,
+                        "Start Frequency": new_end
+                      }
+        
+        for idx, (key, val) in enumerate(self.params.items()):
+            self.updateConfig('Frequency Sweep Settings', key, val)
+            self.label_list[idx].config(text=key+": "+val)
     
     def switchGraph(self, event):
         if event == "Frequency Sweep":
@@ -429,17 +506,17 @@ class tkApp(tk.Tk):
         if event == "Fit Details":
             self.graph_fits() 
         self.update_idletasks()
-        self.update()       
+        self.update()
 
     def graph_sweep(self):
         self.ax.clear()
         self.ay.clear()
         if np.asarray(self.TFdata.sweep).ndim > 1:
-            self.ax.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 2])
-            self.ay.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 3])
+            self.ax.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 2]*1E9/self.TFdata.current_amp)
+            self.ay.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 3]*1E9/self.TFdata.current_amp)
         self.ax.set_title("Frequency Sweep")
-        self.ax.set_ylabel("I")
-        self.ay.set_ylabel("I")
+        self.ax.set_ylabel("I, nA")
+        self.ay.set_ylabel("I, nA")
         self.ay.set_xlabel("f, hz")
         self.canvas.draw()
         
@@ -458,6 +535,7 @@ class tkApp(tk.Tk):
         self.ax.set_ylabel("Width, hz")
         self.ay.set_ylabel("$f_0$, hz")
         self.ay.set_xlabel("time")
+        ticks_to_hours(self.ay, self.TFdata.saved_fits[0, 0], self.TFdata.saved_fits[-1, 0])
         self.canvas.draw()
         
         
@@ -471,7 +549,7 @@ class tkApp(tk.Tk):
                 self.gen.Set_Frequency(f)
                 self.after( self.wait_time)
                 Vx, Vy = self.lockin.Read_XY()
-                self.TFdata.append_sweep([time.time(), f, Vx, Vy])
+                self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 if self.showGraph.get() == "Frequency Sweep":
                     self.graph_sweep()
                 self.update_idletasks()
@@ -486,7 +564,9 @@ class tkApp(tk.Tk):
                 self.sweep()
                 self.TFdata.save_sweep()
                 if self.fitBool.get():
-                    self.TFdata.fit_sweep()
+                    xflag = self.TFdata.fit_sweep()
+                    if self.trackBool and xflag in [1,2,3,4]:
+                        self.tracking()
                     if self.showGraph.get() == "Fit Details":
                         self.graph_fits()
                     if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
