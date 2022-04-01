@@ -35,6 +35,7 @@ from tuning_fork import Lorentz_Fitting as LF
 def ticks_to_hours(graph, time_start, time_end):
     new_ticks = []
     xlabels = []
+    time_start, time_end = time_start/3600, time_end/3600
     # time if time length of data is < 30 minutes, use 7 HH:MM:SS; otherwise 9 HH:MM
     if (time_end - time_start)*60 < 30:
         ticks = np.linspace(time_start, time_end, 7)
@@ -42,7 +43,7 @@ def ticks_to_hours(graph, time_start, time_end):
             dt = str(timedelta(seconds=int(val*3600)))
             if dt not in xlabels:
                 xlabels.append(dt)
-                new_ticks.append(val)
+                new_ticks.append(val*3600)
     else:
         ticks = np.linspace(time_start, time_end, 9)
         for idx, val in enumerate(ticks):
@@ -54,7 +55,7 @@ def ticks_to_hours(graph, time_start, time_end):
             dt = dt[0]+":"+dt[1]
             if dt not in xlabels:
                 xlabels.append(dt)
-                new_ticks.append(time)
+                new_ticks.append(time*3600)
 
     graph.set_xticks(new_ticks)
     graph.set_xticklabels(xlabels)
@@ -143,7 +144,6 @@ class TFdata:
             guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]-self.sweep[0, 1])/8, 0, 0, 0, 0]
             xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
             xfit = np.abs(xfit)
-            # print(xfit)
             yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             yfit = np.abs(yfit)
         if xflag in [1,2,3,4]:
@@ -152,23 +152,23 @@ class TFdata:
         
         
     def getfilename(self, directory, file_tag, num=0):
-        fname = self.current_working_dir+r"\data\{}\{}__{}.dat".format(directory, file_tag, num)
-        if os.path.isdir(self.current_working_dir+"\\data\\"+directory) == False:
-            os.makedirs(self.current_working_dir+"\\data\\"+directory)
+        fname = self.current_working_dir+r"/data/{}/{}__{}.dat".format(directory, file_tag, num)
+        if os.path.isdir(self.current_working_dir+"/data/"+directory) == False:
+            os.makedirs(self.current_working_dir+"/data/"+directory)
         if os.path.isfile(fname):
             return self.getfilename(directory, file_tag, num+1)
         return fname
         
     def save_fits(self):
         if np.array(self.fits).ndim > 1:
-            fname = self.getfilename(self.save_directory, "{}_fits_{}".format(self.TF_name, self.today))
+            fname = self.getfilename(self.save_directory+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
             if self.header is not None:
                 np.savetxt(fname, np.array(self.fits), header=self.header, delimiter='\t')
             else:
                 np.savetxt(fname, np.array(self.fits), delimiter='\t')
             
     def save_sweep(self):
-        fname = self.getfilename(self.save_directory+"\sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
+        fname = self.getfilename(self.save_directory+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
         if self.sweep_header is not None:
             np.savetxt(fname, np.array(self.sweep), header=self.sweep_header, delimiter='\t')
         else:
@@ -226,6 +226,10 @@ class tkApp(tk.Tk):
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
                              save_directory=self.config["Monitor Save Settings"]["Save Folder"])
         self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        try:
+            self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        except:
+            print("Drive Not Set")
         self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
         
         self.params = {
@@ -466,7 +470,11 @@ class tkApp(tk.Tk):
             self.TFdata.set_current_amp(float(self.current_amp_entry.get())) 
         if isStrFloat(self.drive_entry.get()):
             self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
-            self.TFdata.set_drive(float(self.drive_entry.get()))  
+            self.TFdata.set_drive(float(self.drive_entry.get()))
+            try:
+                self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
+            except:
+                print("Drive Not Set")
 
 
     def on_key_press(self, event):
@@ -494,8 +502,8 @@ class tkApp(tk.Tk):
         self.TFdata.save_fits()
     
     def tracking(self):
-        resonance = self.TF_data.fits[-1][3]
-        width = self.TF_data.fits[-1][5]
+        resonance = self.TFdata.fits[-1][3]
+        width = self.TFdata.fits[-1][5]
         new_start = resonance-self.tracking_range*width
         if new_start < 1:
             new_start = 1
@@ -505,13 +513,13 @@ class tkApp(tk.Tk):
         
         self.params = {
                         "Num Pts": self.params["Num Pts"],
-                        "End Frequency": new_start,
-                        "Start Frequency": new_end
+                        "End Frequency": new_end,
+                        "Start Frequency": new_start
                       }
         
         for idx, (key, val) in enumerate(self.params.items()):
             self.updateConfig('Frequency Sweep Settings', key, val)
-            self.label_list[idx].config(text=key+": "+val)
+            self.label_list[idx].config(text=key+": "+str(val))
     
     def switchGraph(self, event):
         if event == "Frequency Sweep":
@@ -539,16 +547,24 @@ class tkApp(tk.Tk):
         self.ax.clear()
         self.ay.clear()
         if self.TFdata.saved_fits.ndim > 1:
-            self.ax.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 4])
-            self.ay.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 2])
+            self.ax.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 5])
+            self.ay.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3])
+            time0 = self.TFdata.saved_fits[0, 0]
         if np.asarray(self.TFdata.fits).ndim > 1:
-            self.ax.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 4])
-            self.ay.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 2])
+            self.ax.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 5])
+            self.ay.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3])
+            time1 = self.TFdata.fits[-1][0]
+            try:
+                ticks_to_hours(self.ay, time0, time1)
+            except:
+                time0 = self.TFdata.fits[0][0]
+                ticks_to_hours(self.ay, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
+                
         self.ax.set_title("Fit Values")
         self.ax.set_ylabel("Width, hz")
         self.ay.set_ylabel("$f_0$, hz")
         self.ay.set_xlabel("time")
-        ticks_to_hours(self.ay, self.TFdata.saved_fits[0, 0], self.TFdata.saved_fits[-1, 0])
+        
         self.canvas.draw()
         
         
@@ -567,6 +583,10 @@ class tkApp(tk.Tk):
                     self.graph_sweep()
                 self.update_idletasks()
                 self.update()
+        if idx == len(frequencies)-1:
+            return True
+        else:
+            return False
 
     def start(self):
         self.start_button.config(text="Stop", command=self.stop)
@@ -574,9 +594,9 @@ class tkApp(tk.Tk):
         self.run = True
         while self.run:
             try:
-                self.sweep()
+                sweep_finished = self.sweep()
                 self.TFdata.save_sweep()
-                if self.fitBool.get():
+                if self.fitBool.get() and sweep_finished:
                     xflag = self.TFdata.fit_sweep()
                     if self.trackBool and xflag in [1,2,3,4]:
                         self.tracking()
