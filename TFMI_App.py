@@ -149,7 +149,7 @@ class TFdata:
             guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]-self.sweep[0, 1])/8, 0, 0, 0, 0]
             self.xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
             self.xfit[0], self.xfit[2] = np.abs(self.xfit[0]), np.abs(self.xfit[2])
-            self.yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
+            self.yfit, yflag = LF.Lorentz_Fit_Y_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             self.yfit[0], self.yfit[2] = np.abs(self.yfit[0]), np.abs(self.yfit[2])
         if xflag in [1,2,3,4]:
             self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *self.xfit, *self.yfit])
