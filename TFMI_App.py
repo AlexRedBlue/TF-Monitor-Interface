@@ -85,6 +85,7 @@ class TFdata:
         self.get_today()
         self.set_drive(1)
         self.set_current_amp(1)
+        self.store_last_sweep([])
         x_header = "\tx:Frequency, Hz\tx:Amplitude, V\tx:Width, Hz\tx:Phase, Rad\tx:Background intercept, V\tx:Background slope, dV/df\tx:Background quadratic, d2V/d2f"
         y_header = "\ty:Frequency, Hz\ty:Amplitude, V\ty:Width, Hz\ty:Phase, Rad\ty:Background intercept, V\ty:Background slope, dV/df\ty:Background quadratic, d2V/d2f"
         self.header = "Time, s\tDrive, V\tCurrent Amp"+x_header+y_header
@@ -99,6 +100,9 @@ class TFdata:
         self.today = datetime(year=now.year, month=now.month, day=now.day)
         self.timestamp_today = time.mktime(self.today.timetuple())
         self.today = self.today.strftime("%Y-%m-%d")
+        
+    def store_last_sweep(self, sweep):
+        self.last_sweep = np.array(sweep)
         
     def set_drive(self, value):
         self.drive = value
@@ -140,14 +144,15 @@ class TFdata:
             
     def fit_sweep(self):
         self.sweep = np.array(self.sweep)
+        self.store_last_sweep(self.sweep)
         if self.sweep.ndim > 1:
             guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]-self.sweep[0, 1])/8, 0, 0, 0, 0]
-            xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
-            xfit = np.abs(xfit)
-            yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
-            yfit = np.abs(yfit)
+            self.xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
+            self.xfit[0], self.xfit[2] = np.abs(self.xfit[0]), np.abs(self.xfit[2])
+            self.yfit, yflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
+            self.yfit[0], self.yfit[2] = np.abs(self.yfit[0]), np.abs(self.yfit[2])
         if xflag in [1,2,3,4]:
-            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *xfit, *yfit])
+            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *self.xfit, *self.yfit])
         return xflag
         
         
@@ -532,9 +537,15 @@ class tkApp(tk.Tk):
     def graph_sweep(self):
         self.ax.clear()
         self.ay.clear()
+        if self.TFdata.last_sweep.ndim > 1:
+            self.ax.plot(self.TFdata.last_sweep[:, 1], LF.Lorentz_x_quad(self.TFdata.last_sweep[:, 1], self.TFdata.xfit)*1E9/self.TFdata.current_amp, color='black')
+            self.ay.plot(self.TFdata.last_sweep[:, 1], LF.Lorentz_y_quad(self.TFdata.last_sweep[:, 1], self.TFdata.yfit)*1E9/self.TFdata.current_amp, color='black')
         if np.asarray(self.TFdata.sweep).ndim > 1:
-            self.ax.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 2]*1E9/self.TFdata.current_amp)
-            self.ay.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 3]*1E9/self.TFdata.current_amp)
+            self.ax.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 2]*1E9/self.TFdata.current_amp, 'o')
+            self.ay.plot(np.asarray(self.TFdata.sweep)[:, 1], np.asarray(self.TFdata.sweep)[:, 3]*1E9/self.TFdata.current_amp, 'o')
+        if self.TFdata.last_sweep.ndim > 1:
+            self.ax.plot(self.TFdata.last_sweep[:, 1], self.TFdata.last_sweep[:, 2]*1E9/self.TFdata.current_amp, 'o', fillstyle='none')
+            self.ay.plot(self.TFdata.last_sweep[:, 1], self.TFdata.last_sweep[:, 3]*1E9/self.TFdata.current_amp, 'o', fillstyle='none')
         self.ax.set_title("Frequency Sweep")
         self.ax.set_ylabel("I, nA")
         self.ay.set_ylabel("I, nA")
