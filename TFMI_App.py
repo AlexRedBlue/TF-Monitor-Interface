@@ -550,16 +550,17 @@ class tkApp(tk.Tk):
             self.ax.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 5])
             self.ay.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3])
             time0 = self.TFdata.saved_fits[0, 0]
+            time1 = self.TFdata.saved_fits[-1,0]
         if np.asarray(self.TFdata.fits).ndim > 1:
             self.ax.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 5])
             self.ay.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3])
             time1 = self.TFdata.fits[-1][0]
-            try:
-                ticks_to_hours(self.ay, time0, time1)
-            except:
+            if self.TFdata.saved_fits.ndim < 2:
                 time0 = self.TFdata.fits[0][0]
-                ticks_to_hours(self.ay, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
-                
+
+        if self.TFdata.saved_fits.ndim > 1 or np.asarray(self.TFdata.fits).ndim > 1: 
+            ticks_to_hours(self.ay, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
+          
         self.ax.set_title("Fit Values")
         self.ax.set_ylabel("Width, hz")
         self.ay.set_ylabel("$f_0$, hz")
@@ -583,10 +584,9 @@ class tkApp(tk.Tk):
                     self.graph_sweep()
                 self.update_idletasks()
                 self.update()
-        if idx == len(frequencies)-1:
-            return True
-        else:
-            return False
+            else:
+                return False
+        return True
 
     def start(self):
         self.start_button.config(text="Stop", command=self.stop)
