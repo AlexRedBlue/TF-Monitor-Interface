@@ -11,3 +11,4 @@ archive-data/*
 machine_learning/models/*
 machine_learning/machine_learning
 *.cfg
+*.cfg
