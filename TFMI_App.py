@@ -219,11 +219,19 @@ class tkApp(tk.Tk):
         try:
             self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
         except:
-            print("Drive Not Set")
+            print("Drive Not Set Properly")
+            
+        try:
+            self.lockin.Set_Phase(float(self.config["Frequency Sweep Settings"]["Phase, deg"]))
+        except:
+            print("Phase Not Set Properly")
+            
+            
         self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
         
         self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
                         "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
+                        "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
                         "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
                         "Wait Time, ms": int(float(self.config["Frequency Sweep Settings"]["Wait Time, ms"])),
                         "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
@@ -275,8 +283,6 @@ class tkApp(tk.Tk):
         self.param_label_frame_2 = tk.Frame(self)
         self.param_label_frame_2.place(x="5i", y="8.25i")
         
-    
-        
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
         
@@ -319,6 +325,11 @@ class tkApp(tk.Tk):
         self.fit_check = tk.Checkbutton(master=self, text="Fit", variable=self.fitBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
         self.fit_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
+        self.correctPhaseBool = tk.IntVar()
+        self.correctPhaseBool.set(0)
+        self.correctPhase_check = tk.Checkbutton(master=self, text="Correct Phase", variable=self.correctPhaseBool, onvalue=1, offvalue=0)
+        self.correctPhase_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
+        
         self.trackBool = tk.IntVar()
         self.trackBool.set(int(self.config["Monitor Checkbox Settings"]["Tracking"]))
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
@@ -350,6 +361,7 @@ class tkApp(tk.Tk):
         self.config.add_section('Frequency Sweep Settings')
         self.config.set('Frequency Sweep Settings', 'Start Frequency', '32700')
         self.config.set('Frequency Sweep Settings', 'End Frequency', '32900')
+        self.config.set('Frequency Sweep Settings', 'Phase, deg', '0')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
         self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1')
         self.config.set('Frequency Sweep Settings', 'Drive', '1')
@@ -548,6 +560,9 @@ class tkApp(tk.Tk):
                     self.entry_list[idx].delete(0, 'end')
                     if key == "Drive, V":
                         self.gen.Set_Voltage(float(self.entry_list[idx].get()))
+                    if key == "Phase, deg":
+                        self.lockin.Set_Phase(val)
+                    
             except Exception as e:
                 print(e)
         
@@ -584,6 +599,14 @@ class tkApp(tk.Tk):
         self.updateConfig('Frequency Sweep Settings', "End Frequency", new_end)
         self.label_list[0].config(text = "Start Frequency: {:.3f}".format(new_start))
         self.label_list[1].config(text = "End Frequency: {:.3f}".format(new_end))
+        
+    def phaseCorrection(self):
+        self.params['Phase, deg'] = self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi
+        # print(self.params['Phase, deg'])
+        self.lockin.Set_Phase(self.params['Phase, deg'])
+        self.updateConfig('Frequency Sweep Settings', "Phase, deg", self.params['Phase, deg'])
+        self.label_list[2].config(text = "Phase, deg: {:.2f}".format(self.params['Phase, deg']))
+        
     
     def switchGraph(self, event):
         if event == "Frequency Sweep":
@@ -668,8 +691,11 @@ class tkApp(tk.Tk):
                 self.TFdata.save_sweep()
                 if self.fitBool.get() and sweep_finished:
                     xflag = self.TFdata.fit_sweep()
-                    if self.trackBool and xflag in [1,2,3,4]:
-                        self.tracking()
+                    if xflag in [1,2,3,4]:
+                        if self.trackBool:
+                            self.tracking()
+                        if self.correctPhaseBool:
+                            self.phaseCorrection()
                     # if self.showGraph.get() == "Fit Details":
                     self.graph_fits()
                     if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
@@ -677,6 +703,7 @@ class tkApp(tk.Tk):
                         self.TFdata.reset_save_time()
                     if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
                         self.TFdata.daily_save()
+                
             except Exception as e:
                 print(e)
                 if self.run:

@@ -70,6 +70,9 @@ class SR830:
     def Get_Phase(self):
         return float(self.inst.query("PHAS?").rstrip())
     
+    def Set_Phase(self, phase):
+        self.inst.write("PHAS {:.2f}".format(phase))
+    
     def Get_Ref(self):
         return self.ref_dict[self.inst.query("FMOD?").rstrip()]
     
