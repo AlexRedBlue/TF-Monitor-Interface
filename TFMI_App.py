@@ -229,7 +229,7 @@ class tkApp(tk.Tk):
                         "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
                       }
         
-        # Interface placements
+        # Interface frames
         self.wm_title("Freq Sweep Alpha")
         
         graph_size = 0.8
@@ -265,62 +265,72 @@ class tkApp(tk.Tk):
         self.canvas2.mpl_connect("key_press_event", self.on_key_press)
 
         
-        self.param_entry_placement = tk.Frame(self)
-        self.param_entry_placement.place(x="1i", y="8.25i")
-        self.param_label_placement = tk.Frame(self)
-        self.param_label_placement.place(x="2i", y="8.25i")
+        self.param_entry_frame = tk.Frame(self)
+        self.param_entry_frame.place(x="1i", y="8.25i")
+        self.param_label_frame = tk.Frame(self)
+        self.param_label_frame.place(x="2i", y="8.25i")
         
-        self.param_entry_placement_2 = tk.Frame(self)
-        self.param_entry_placement_2.place(x="4i", y="8.25i")
-        self.param_label_placement_2 = tk.Frame(self)
-        self.param_label_placement_2.place(x="5i", y="8.25i")
+        self.param_entry_frame_2 = tk.Frame(self)
+        self.param_entry_frame_2.place(x="4i", y="8.25i")
+        self.param_label_frame_2 = tk.Frame(self)
+        self.param_label_frame_2.place(x="5i", y="8.25i")
         
     
         
-        self.checkbox_placement = tk.Frame(self)
-        self.checkbox_placement.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
+        self.checkbox_frame = tk.Frame(self)
+        self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
         
-        self.options_placement = tk.Frame(self)
-        self.options_placement.place(x="{}i".format(self.win_zoom_inches["width"]-1),  y="{}i".format(self.win_zoom_inches["height"]-9/16))
+        self.option_frame = tk.Frame(self)
+        self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+self.win_zoom_inches["width"]/2*4.8/6.4))
+        
+        self.tracking_button = tk.Button(self.checkbox_frame, text="Update Tracking Range", padx=10, command=self.update_tracking_range)
+        self.tracking_button.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
+        self.tracking_label = tk.Label(self.checkbox_frame, text="Tracking Range: {:.2f}".format(self.tracking_range))
+        self.tracking_label.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
+        self.tracking_entry = tk.Entry(self.checkbox_frame, width=5)
+        self.tracking_entry.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
+        
+        self.settings_frame = tk.Frame(self)
+        self.settings_frame.place(x="{}i".format(self.win_zoom_inches["width"]-1),  y="{}i".format(self.win_zoom_inches["height"]-9/16))
         
         # labels & Text Boxes
         self.label_list = []
         self.entry_list = []
         for idx, (key, val) in enumerate(self.params.items()):
             if idx<3:
-                self.label_list.append(tk.Label(self.param_label_placement, text = key+" {:.3f}".format(val)))
-                self.label_list[-1].pack(in_=self.param_label_placement, pady=5)
+                self.label_list.append(tk.Label(self.param_label_frame, text = key+": {:.3f}".format(val)))
+                self.label_list[-1].pack(in_=self.param_label_frame, pady=5)
                 
-                self.entry_list.append(tk.Entry(self.param_entry_placement, width=8))
-                self.entry_list[-1].pack(in_=self.param_entry_placement, pady=5)
+                self.entry_list.append(tk.Entry(self.param_entry_frame, width=8))
+                self.entry_list[-1].pack(in_=self.param_entry_frame, pady=5)
             else:
-                self.label_list.append(tk.Label(self.param_label_placement_2, text = key+" {:.3f}".format(val)))
-                self.label_list[-1].pack(in_=self.param_label_placement_2, pady=5)
+                self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {:.3f}".format(val)))
+                self.label_list[-1].pack(in_=self.param_label_frame_2, pady=5)
                 
-                self.entry_list.append(tk.Entry(self.param_entry_placement_2, width=8))
-                self.entry_list[-1].pack(in_=self.param_entry_placement_2, pady=5)
+                self.entry_list.append(tk.Entry(self.param_entry_frame_2, width=8))
+                self.entry_list[-1].pack(in_=self.param_entry_frame_2, pady=5)
 
         
         self.update_button = tk.Button(master=self, text="Update Params", command=self.update_sweep_params)
-        self.update_button.pack(in_=self.param_entry_placement, pady=5)
+        self.update_button.pack(in_=self.param_entry_frame, pady=5)
         
         self.fitBool = tk.IntVar()
         self.fitBool.set(int(self.config["Monitor Checkbox Settings"]["Fitting"]))
         self.fit_check = tk.Checkbutton(master=self, text="Fit", variable=self.fitBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
-        self.fit_check.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
+        self.fit_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
         self.trackBool = tk.IntVar()
         self.trackBool.set(int(self.config["Monitor Checkbox Settings"]["Tracking"]))
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
-        self.track_check.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
+        self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
         self.showGraph = tk.StringVar(self)
         self.showGraph.set("Frequency Sweep") # default value
         self.showGraph_Options = tk.OptionMenu(self, self.showGraph, "Frequency Sweep", "Fit Details", command=self.switchGraph)
-        self.showGraph_Options.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
+        self.showGraph_Options.pack(in_=self.option_frame)
         
         self.settings_button = tk.Button(master=self, text="Settings", command=self.settingsWindow)
-        self.settings_button.pack(in_=self.options_placement, side=tk.RIGHT, padx=5, pady=5)
+        self.settings_button.pack(in_=self.settings_frame, side=tk.RIGHT, padx=5, pady=5)
         
         self.start_button = tk.Button(master=self, text="Start", bg='green', fg='white', height=2, width=9, command=self.start)
         self.start_button.place(x="{}i".format(10-0.4), y="8.5i")
@@ -541,6 +551,12 @@ class tkApp(tk.Tk):
             except Exception as e:
                 print(e)
         
+    def update_tracking_range(self):
+        if self.tracking_entry.get() != '' and isStrFloat(self.tracking_entry.get()):
+            self.tracking_range = float(self.tracking_entry.get())
+            self.tracking_label.config(text="Tracking Range: {}".format(self.tracking_entry.get()))
+            self.updateConfig("Tracking Settings", "Range", self.tracking_entry.get())
+            self.tracking_range.delete(0, 'end')
     
 
     def _quit(self):
@@ -566,8 +582,8 @@ class tkApp(tk.Tk):
         
         self.updateConfig('Frequency Sweep Settings', "Start Frequency", new_start)
         self.updateConfig('Frequency Sweep Settings', "End Frequency", new_end)
-        self.label_list[0].config(text = "Start Frequency {:.3f}".format(new_start))
-        self.label_list[1].config(text = "End Frequency {:.3f}".format(new_end))
+        self.label_list[0].config(text = "Start Frequency: {:.3f}".format(new_start))
+        self.label_list[1].config(text = "End Frequency: {:.3f}".format(new_end))
     
     def switchGraph(self, event):
         if event == "Frequency Sweep":
