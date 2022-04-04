@@ -78,10 +78,10 @@ def isStrFloat(text):
         return False
     
 class TFdata:
-    def __init__(self, TF_name, save_directory):
+    def __init__(self, TF_name, save_folder):
         self.current_working_dir = os.getcwd()
         self.TF_name = TF_name
-        self.save_directory = save_directory
+        self.save_folder = save_folder
         self.get_today()
         self.set_drive(1)
         self.set_current_amp(1)
@@ -166,14 +166,14 @@ class TFdata:
         
     def save_fits(self):
         if np.array(self.fits).ndim > 1:
-            fname = self.getfilename(self.save_directory+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
+            fname = self.getfilename(self.save_folder+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
             if self.header is not None:
                 np.savetxt(fname, np.array(self.fits), header=self.header, delimiter='\t')
             else:
                 np.savetxt(fname, np.array(self.fits), delimiter='\t')
             
     def save_sweep(self):
-        fname = self.getfilename(self.save_directory+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
+        fname = self.getfilename(self.save_folder+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
         if self.sweep_header is not None:
             np.savetxt(fname, np.array(self.sweep), header=self.sweep_header, delimiter='\t')
         else:
@@ -214,7 +214,7 @@ class tkApp(tk.Tk):
             print("Invalid Signal-Gen Instrument Type: Reset Config File")
         
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
-                             save_directory=self.config["Monitor Save Settings"]["Save Folder"])
+                             save_folder=self.config["Monitor Save Settings"]["Save Folder"])
         self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
         try:
             self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
@@ -366,7 +366,6 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1')
         self.config.set('Frequency Sweep Settings', 'Drive', '1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
-        self.config.set('Frequency Sweep Settings', 'Save Directory', r"C:\Users\physics-svc-mkdata\Documents\Data\TuningForkThermometer")
         
         self.config.add_section("Instrument Settings")
         self.config.set("Instrument Settings", "Lock-in Model", "LI 5640")
@@ -416,6 +415,9 @@ class tkApp(tk.Tk):
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
         
+        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+        self.run = False
+        
         sWin.geometry("480x360")
         sWin.title("Settings")
         
@@ -448,9 +450,9 @@ class tkApp(tk.Tk):
         self.SG_Model_Options.place(anchor="nw", x=160, y=68)
 
         # Save Folder
-        self.Save_Folder = tk.Entry(sWin, width=12)
-        self.Save_Folder.insert(0, self.config["Monitor Save Settings"]["Save Folder"])
-        self.Save_Folder.place(anchor="nw", x=100, y=120)
+        self.Save_Folder_entry = tk.Entry(sWin, width=12)
+        self.Save_Folder_entry.insert(0, self.config["Monitor Save Settings"]["Save Folder"])
+        self.Save_Folder_entry.place(anchor="nw", x=100, y=120)
         
         Folder_Label = tk.Label(sWin, text="Save Folder")
         Folder_Label.place(x=15, y=120)
@@ -463,7 +465,7 @@ class tkApp(tk.Tk):
         Name_Label = tk.Label(sWin, text="TF Name")
         Name_Label.place(x=15, y=150)
         
-        next_fit_name = self.TFdata.getfilename(self.TFdata.save_directory, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
         
         self.fit_Label = tk.Label(sWin, text="Next Fit File:        "+next_fit_name)
         self.fit_Label.place(x=15, y=200)
@@ -491,13 +493,13 @@ class tkApp(tk.Tk):
         Drive_Label = tk.Label(sWin, text="Drive, V")
         Drive_Label.place(x=250, y=150)
         
-        next_fit_name = self.TFdata.getfilename(self.TFdata.save_directory, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
         
         ###### END OF TODO ######
 
         save_button = tk.Button(sWin, text='Save', command=self.save_settings)
         save_button.place(anchor="sw", x=15, y=345)
-        close_button = tk.Button(sWin, text='Quit', command=lambda:close_win(sWin))
+        close_button = tk.Button(sWin, text='Exit', command=lambda:close_win(sWin))
         close_button.place(anchor="se", x=465, y=345)
 
         self.wait_window(self)
@@ -523,16 +525,16 @@ class tkApp(tk.Tk):
         else:
             print("Invalid Signal-Gen Instrument Type: Reset Config File")
         
-        if self.Save_Folder != self.config["Monitor Save Settings"]["Save Folder"]:
+        if self.Save_Folder_entry.get() != self.config["Monitor Save Settings"]["Save Folder"]:
             self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder.get())
-            self.TFdata.save_directory = self.Save_Folder.get()
-            next_fit_name = self.TFdata.getfilename(self.TFdata.save_directory, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+            self.TFdata.save_folder = self.Save_Folder_entry.get()
+            next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
             self.fit_Label.config(text="Next Fit File:        "+next_fit_name)
         
         if self.TF_savename != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
             self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
             self.TFdata.TF_name = self.TF_savename.get()
-            self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_directory, self.TFdata.today))
+            self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
             
         if isStrFloat(self.current_amp_entry.get()):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
