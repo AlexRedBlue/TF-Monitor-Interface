@@ -557,13 +557,14 @@ class tkApp(tk.Tk):
             try:
                 if self.entry_list[idx].get() != '':
                     self.params[key] = int(self.entry_list[idx].get())
-                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
-                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
-                    self.entry_list[idx].delete(0, 'end')
                     if key == "Drive, V":
                         self.gen.Set_Voltage(float(self.entry_list[idx].get()))
                     if key == "Phase, deg":
-                        self.lockin.Set_Phase(val)
+                        self.lockin.Set_Phase(float(self.entry_list[idx].get()))
+                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
+                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
+                    self.entry_list[idx].delete(0, 'end')
+                    
                     
             except Exception as e:
                 print(e)
