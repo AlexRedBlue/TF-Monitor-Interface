@@ -185,6 +185,10 @@ class tkApp(tk.Tk):
     def __init__(self):
         super().__init__()
         
+        self.state("zoomed")
+        
+        self.init_window_size()
+        
         self.config = configparser.RawConfigParser()
         
         if not os.path.exists('TFMI_Config.cfg'):
@@ -209,25 +213,6 @@ class tkApp(tk.Tk):
         else:
             print("Invalid Signal-Gen Instrument Type: Reset Config File")
         
-        
-        self.wm_title("Freq Sweep Alpha")
-        
-        self.row1 = tk.Frame(self)
-        self.row1.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.row2 = tk.Frame(self)
-        self.row2.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.row3 = tk.Frame(self)
-        self.row3.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        # self.bottom1 = tk.Frame(self)
-        # self.bottom2.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-        # self.bottom1.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-        
-        self.fig = Figure(figsize=(8, 6), dpi=100)
-        self.ax = self.fig.add_subplot(2,1,1)
-        self.ay = self.fig.add_subplot(2,1,2)
-
-        
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
                              save_directory=self.config["Monitor Save Settings"]["Save Folder"])
         self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
@@ -237,62 +222,108 @@ class tkApp(tk.Tk):
             print("Drive Not Set")
         self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
         
-        self.params = {
-                        "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
+        self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
                         "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
-                        "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"])
+                        "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
+                        "Wait Time, ms": int(float(self.config["Frequency Sweep Settings"]["Wait Time, ms"])),
+                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
                       }
         
-        self.wait_time = int(float(self.config["Frequency Sweep Settings"]["Wait Time"])*1000) # wait time in ms
+        # Interface placements
+        self.wm_title("Freq Sweep Alpha")
+        
+        graph_size = 0.8
+        padding = (1-graph_size)/2*(self.win_zoom_inches["width"]/2)
+        
+        self.graph_1 = tk.Frame(self)
+        self.graph_1.place(x="{}i".format(padding),y="0i")
+        self.graph_2 = tk.Frame(self)
+        self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
+        
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
+        self.ax = self.fig.add_subplot(2,1,1)
+        self.ay = self.fig.add_subplot(2,1,2)
+        
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
+        self.ax2 = self.fig2.add_subplot(2,1,1)
+        self.ay2 = self.fig2.add_subplot(2,1,2)
         
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
-        self.canvas.get_tk_widget().pack(in_=self.row1, side=tk.TOP, fill=tk.BOTH, expand=1)
-        
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
-        self.toolbar.update()
-        self.canvas.get_tk_widget().pack(in_=self.row1, side=tk.TOP, fill=tk.BOTH, expand=1)
-        
+        self.canvas.get_tk_widget().pack(in_=self.graph_1)
+
+        self.toolbar1 = NavigationToolbar2Tk(self.canvas, self.graph_1)
+        self.toolbar1.update()
+        self.canvas.get_tk_widget().pack(in_=self.graph_1)
         self.canvas.mpl_connect("key_press_event", self.on_key_press)
         
+        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self)  # A tk.DrawingArea.
+        self.canvas2.get_tk_widget().pack(in_=self.graph_2)
         
+        self.toolbar2 = NavigationToolbar2Tk(self.canvas2, self.graph_2)
+        self.toolbar2.update()
+        self.canvas2.get_tk_widget().pack(in_=self.graph_2)
+        self.canvas2.mpl_connect("key_press_event", self.on_key_press)
+
         
+        self.param_entry_placement = tk.Frame(self)
+        self.param_entry_placement.place(x="1i", y="8.25i")
+        self.param_label_placement = tk.Frame(self)
+        self.param_label_placement.place(x="2i", y="8.25i")
         
-        self.start_button = tk.Button(master=self, text="Start", command=self.start)
-        self.start_button.pack(in_=self.row3, side=tk.LEFT, padx=5, pady=5)
+        self.param_entry_placement_2 = tk.Frame(self)
+        self.param_entry_placement_2.place(x="4i", y="8.25i")
+        self.param_label_placement_2 = tk.Frame(self)
+        self.param_label_placement_2.place(x="5i", y="8.25i")
         
+    
+        
+        self.checkbox_placement = tk.Frame(self)
+        self.checkbox_placement.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
+        
+        self.options_placement = tk.Frame(self)
+        self.options_placement.place(x="{}i".format(self.win_zoom_inches["width"]-1),  y="{}i".format(self.win_zoom_inches["height"]-9/16))
         
         # labels & Text Boxes
         self.label_list = []
         self.entry_list = []
         for idx, (key, val) in enumerate(self.params.items()):
-            
-            self.label_list.append(tk.Label(self.row2, text = key+" "+str(val)))
-            self.label_list[-1].pack(in_=self.row2,side=tk.RIGHT)
-            
-            self.entry_list.append(tk.Entry(self.row2, width=10))
-            self.entry_list[-1].pack(in_=self.row2, side=tk.RIGHT)
+            if idx<3:
+                self.label_list.append(tk.Label(self.param_label_placement, text = key+" {:.3f}".format(val)))
+                self.label_list[-1].pack(in_=self.param_label_placement, pady=5)
+                
+                self.entry_list.append(tk.Entry(self.param_entry_placement, width=8))
+                self.entry_list[-1].pack(in_=self.param_entry_placement, pady=5)
+            else:
+                self.label_list.append(tk.Label(self.param_label_placement_2, text = key+" {:.3f}".format(val)))
+                self.label_list[-1].pack(in_=self.param_label_placement_2, pady=5)
+                
+                self.entry_list.append(tk.Entry(self.param_entry_placement_2, width=8))
+                self.entry_list[-1].pack(in_=self.param_entry_placement_2, pady=5)
 
         
         self.update_button = tk.Button(master=self, text="Update Params", command=self.update_sweep_params)
-        self.update_button.pack(in_=self.row3, side=tk.RIGHT)
+        self.update_button.pack(in_=self.param_entry_placement, pady=5)
         
         self.fitBool = tk.IntVar()
         self.fitBool.set(int(self.config["Monitor Checkbox Settings"]["Fitting"]))
         self.fit_check = tk.Checkbutton(master=self, text="Fit", variable=self.fitBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
-        self.fit_check.pack(in_=self.row3, side=tk.LEFT, padx=5, pady=5)
+        self.fit_check.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
         
         self.trackBool = tk.IntVar()
         self.trackBool.set(int(self.config["Monitor Checkbox Settings"]["Tracking"]))
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
-        self.track_check.pack(in_=self.row3, side=tk.LEFT, padx=5, pady=5)
+        self.track_check.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
         
         self.showGraph = tk.StringVar(self)
         self.showGraph.set("Frequency Sweep") # default value
         self.showGraph_Options = tk.OptionMenu(self, self.showGraph, "Frequency Sweep", "Fit Details", command=self.switchGraph)
-        self.showGraph_Options.pack(in_=self.row3, side=tk.LEFT, padx=5, pady=5)
+        self.showGraph_Options.pack(in_=self.checkbox_placement, side=tk.LEFT, padx=5, pady=5)
         
         self.settings_button = tk.Button(master=self, text="Settings", command=self.settingsWindow)
-        self.settings_button.pack(in_=self.row3, side=tk.RIGHT, padx=5, pady=5)
+        self.settings_button.pack(in_=self.options_placement, side=tk.RIGHT, padx=5, pady=5)
+        
+        self.start_button = tk.Button(master=self, text="Start", bg='green', fg='white', height=2, width=9, command=self.start)
+        self.start_button.place(x="{}i".format(10-0.4), y="8.5i")
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -310,7 +341,7 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'Start Frequency', '32700')
         self.config.set('Frequency Sweep Settings', 'End Frequency', '32900')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
-        self.config.set('Frequency Sweep Settings', 'Wait Time', '1')
+        self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1')
         self.config.set('Frequency Sweep Settings', 'Drive', '1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
         self.config.set('Frequency Sweep Settings', 'Save Directory', r"C:\Users\physics-svc-mkdata\Documents\Data\TuningForkThermometer")
@@ -349,6 +380,17 @@ class tkApp(tk.Tk):
         self.updateConfig("Monitor Checkbox Settings", "Fitting", self.fitBool.get())
         self.updateConfig("Monitor Checkbox Settings", "Tracking", self.trackBool.get())
             
+    def init_window_size(self):
+        self.update_idletasks()
+        self.screen_ratio = {"width": 16, "height": 9}
+        self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
+        self.screen_size_inches = {"width": 20, "height": 11.25}
+        
+        self.monitor_dpi = self.screen_size["x"]/self.screen_size_inches["width"]
+        self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
+        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.monitor_dpi, 
+                                "height": self.win_zoom_size["y"]/self.monitor_dpi}
+    
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
         
@@ -492,10 +534,13 @@ class tkApp(tk.Tk):
                 if self.entry_list[idx].get() != '':
                     self.params[key] = int(self.entry_list[idx].get())
                     self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
-                    self.label_list[idx].config(text=key+": "+self.entry_list[idx].get())
+                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
                     self.entry_list[idx].delete(0, 'end')
+                    if key == "Drive, V":
+                        self.gen.Set_Voltage(float(self.entry_list[idx].get()))
             except Exception as e:
                 print(e)
+        
     
 
     def _quit(self):
@@ -516,15 +561,13 @@ class tkApp(tk.Tk):
         if new_end > 90E5:
             new_end = 90E5
         
-        self.params = {
-                        "Num Pts": self.params["Num Pts"],
-                        "End Frequency": new_end,
-                        "Start Frequency": new_start
-                      }
+        self.params["Start Frequency"] = new_start
+        self.params["End Frequency"] = new_end
         
-        for idx, (key, val) in enumerate(self.params.items()):
-            self.updateConfig('Frequency Sweep Settings', key, val)
-            self.label_list[idx].config(text=key+": "+str(val))
+        self.updateConfig('Frequency Sweep Settings', "Start Frequency", new_start)
+        self.updateConfig('Frequency Sweep Settings', "End Frequency", new_end)
+        self.label_list[0].config(text = "Start Frequency {:.3f}".format(new_start))
+        self.label_list[1].config(text = "End Frequency {:.3f}".format(new_end))
     
     def switchGraph(self, event):
         if event == "Frequency Sweep":
@@ -555,44 +598,44 @@ class tkApp(tk.Tk):
         
     def graph_fits(self):
         
-        self.ax.clear()
-        self.ay.clear()
+        self.ax2.clear()
+        self.ay2.clear()
         if self.TFdata.saved_fits.ndim > 1:
-            self.ax.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 5])
-            self.ay.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3])
+            self.ax2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 5])
+            self.ay2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3])
             time0 = self.TFdata.saved_fits[0, 0]
             time1 = self.TFdata.saved_fits[-1,0]
         if np.asarray(self.TFdata.fits).ndim > 1:
-            self.ax.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 5])
-            self.ay.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3])
+            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 5])
+            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3])
             time1 = self.TFdata.fits[-1][0]
             if self.TFdata.saved_fits.ndim < 2:
                 time0 = self.TFdata.fits[0][0]
 
         if self.TFdata.saved_fits.ndim > 1 or np.asarray(self.TFdata.fits).ndim > 1: 
-            ticks_to_hours(self.ay, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
+            ticks_to_hours(self.ay2, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
           
-        self.ax.set_title("Fit Values")
-        self.ax.set_ylabel("Width, hz")
-        self.ay.set_ylabel("$f_0$, hz")
-        self.ay.set_xlabel("time")
+        self.ax2.set_title("Fit Values")
+        self.ax2.set_ylabel("Width, hz")
+        self.ay2.set_ylabel("$f_0$, hz")
+        self.ay2.set_xlabel("time")
         
-        self.canvas.draw()
+        self.canvas2.draw()
         
         
     def sweep(self):
         self.TFdata.reset_sweep()
         frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
         self.gen.Set_Frequency(self.params["Start Frequency"])
-        self.after(3*self.wait_time)
+        self.after(3*self.params["Wait Time, ms"])
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                self.after( self.wait_time)
+                self.after(self.params["Wait Time, ms"])
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
-                if self.showGraph.get() == "Frequency Sweep":
-                    self.graph_sweep()
+                # if self.showGraph.get() == "Frequency Sweep":
+                self.graph_sweep()
                 self.update_idletasks()
                 self.update()
             else:
@@ -600,7 +643,7 @@ class tkApp(tk.Tk):
         return True
 
     def start(self):
-        self.start_button.config(text="Stop", command=self.stop)
+        self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
         # Main Loop
         self.run = True
         while self.run:
@@ -611,8 +654,8 @@ class tkApp(tk.Tk):
                     xflag = self.TFdata.fit_sweep()
                     if self.trackBool and xflag in [1,2,3,4]:
                         self.tracking()
-                    if self.showGraph.get() == "Fit Details":
-                        self.graph_fits()
+                    # if self.showGraph.get() == "Fit Details":
+                    self.graph_fits()
                     if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                         self.TFdata.save_fits()
                         self.TFdata.reset_save_time()
@@ -631,7 +674,7 @@ class tkApp(tk.Tk):
                     
         
     def stop(self):
-        self.start_button.config(text="Start Sweep", command=self.start)
+        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
         self.run = False
 
         
