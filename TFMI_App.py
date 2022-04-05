@@ -200,34 +200,32 @@ class tkApp(tk.Tk):
         self.save_interval = 60 # in minutes
         self.tracking_range = float(self.config["Tracking Settings"]["Range"])
         
-        if self.config["Instrument Settings"]["Lock-in Model"] == "LI 5640":
-            self.lockin = LOCKIN.LI5640("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
-        elif self.config["Instrument Settings"]["Lock-in Model"] == "SR 830":
-            self.lockin = LOCKIN.SR830("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
-        else:
-            print("Invalid Lock-in Instrument Type: Reset Config File")
-        if self.config["Instrument Settings"]["Signal-Gen Model"] == "Agilent":
-            self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
-        elif self.config["Instrument Settings"]["Signal-Gen Model"] == "Keysight":
-            self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
-        else:
-            print("Invalid Signal-Gen Instrument Type: Reset Config File")
-        
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
                              save_folder=self.config["Monitor Save Settings"]["Save Folder"])
         self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        
+        NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
+        NewGenSet = self.set_signalgen(self.config["Instrument Settings"]["signal-gen model"], self.config["Instrument Settings"]["signal-gen gpib"])
+            
+        if NewLockinSet == False or NewGenSet == False:
+            if not NewLockinSet:
+                print("Something went wrong with Lock-in GPIB settings")
+            if not NewGenSet:
+                print("Something went wrong with Signal-Gen GPIB settings")
+            self.settingsWindow()
+        
         try:
             self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
         except:
             print("Drive Not Set Properly")
-            
         try:
             self.lockin.Set_Phase(float(self.config["Frequency Sweep Settings"]["Phase, deg"]))
         except:
             print("Phase Not Set Properly")
             
             
-        self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        
         
         self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
                         "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
@@ -347,6 +345,9 @@ class tkApp(tk.Tk):
         self.start_button.place(x="{}i".format(10-0.4), y="8.5i")
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        self.update_idletasks()
+        self.update()
 
     def on_closing(self):
         self.update_idletasks()
@@ -415,10 +416,13 @@ class tkApp(tk.Tk):
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
         
-        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+        try:
+            self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+        except:
+            pass
         self.run = False
         
-        sWin.geometry("480x360")
+        sWin.geometry("540x360")
         sWin.title("Settings")
         
         # GPIB Settings
@@ -441,12 +445,12 @@ class tkApp(tk.Tk):
         
         self.Lockin_Model = tk.StringVar(sWin)
         self.Lockin_Model.set(self.config["Instrument Settings"]["Lock-in Model"]) # default value
-        self.L_Model_Options = tk.OptionMenu(sWin, self.Lockin_Model, "LI 5640", "SR 830")
+        self.L_Model_Options = tk.OptionMenu(sWin, self.Lockin_Model, "LI 5640", "SR 830", "Testing")
         self.L_Model_Options.place(anchor="nw", x=160, y=28)
         
         self.SignalGen_Model = tk.StringVar(sWin)
         self.SignalGen_Model.set(self.config["Instrument Settings"]["Signal-Gen Model"]) # default value
-        self.SG_Model_Options = tk.OptionMenu(sWin, self.SignalGen_Model, "Keysight", "Agilent")
+        self.SG_Model_Options = tk.OptionMenu(sWin, self.SignalGen_Model, "Keysight", "Agilent", "Testing")
         self.SG_Model_Options.place(anchor="nw", x=160, y=68)
 
         # Save Folder
@@ -465,13 +469,18 @@ class tkApp(tk.Tk):
         Name_Label = tk.Label(sWin, text="TF Name")
         Name_Label.place(x=15, y=150)
         
-        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        try:
+            next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+            
+            self.fit_Label = tk.Label(sWin, text="Next Fit File: \t\t"+next_fit_name)
+            self.fit_Label.place(x=15, y=200)
+            
+            self.sweep_label = tk.Label(sWin, text="Current Sweep Folder: \t"+"/data/{}/sweeps_{}".format(self.config["Monitor Save Settings"]["Save Folder"], self.TFdata.today))
+            self.sweep_label.place(x=15, y=230)
+        except:
+            pass
         
-        self.fit_Label = tk.Label(sWin, text="Next Fit File:        "+next_fit_name)
-        self.fit_Label.place(x=15, y=200)
         
-        self.sweep_label = tk.Label(sWin, text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.config["Monitor Save Settings"]["Save Folder"], self.TFdata.today))
-        self.sweep_label.place(x=15, y=230)
         
         ###### TODO #######
         # TODO
@@ -480,50 +489,44 @@ class tkApp(tk.Tk):
         # Save Folder
         self.current_amp_entry = tk.Entry(sWin, width=12)
         self.current_amp_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Current Amp"]))
-        self.current_amp_entry.place(anchor="nw", x=370, y=120)
+        self.current_amp_entry.place(anchor="nw", x=400, y=120)
         
         Current_Amp_Label = tk.Label(sWin, text="Current Amp")
-        Current_Amp_Label.place(x=250, y=120)
+        Current_Amp_Label.place(x=300, y=120)
         
         # TF Name
         self.drive_entry = tk.Entry(sWin, width=12)
         self.drive_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Drive"]))
-        self.drive_entry.place(anchor="nw", x=370, y=150)
+        self.drive_entry.place(anchor="nw", x=400, y=150)
         
         Drive_Label = tk.Label(sWin, text="Drive, V")
-        Drive_Label.place(x=250, y=150)
-        
-        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        Drive_Label.place(x=300, y=150)
+
         
         ###### END OF TODO ######
 
         save_button = tk.Button(sWin, text='Save', command=self.save_settings)
         save_button.place(anchor="sw", x=15, y=345)
         close_button = tk.Button(sWin, text='Exit', command=lambda:close_win(sWin))
-        close_button.place(anchor="se", x=465, y=345)
+        close_button.place(anchor="se", x=525, y=345)
 
-        self.wait_window(self)
+        # self.wait_window(self)
         
     def save_settings(self):
         
         if isStrInt(self.Lockin_GPIB.get()):
-            self.updateConfig("Instrument Settings", "Lock-in GPIB", self.Lockin_GPIB.get())
+            NewLockinSet = self.set_lockin(self.Lockin_Model.get(), self.Lockin_GPIB.get())
+            if NewLockinSet:
+                self.updateConfig("Instrument Settings", "Lock-in GPIB", self.Lockin_GPIB.get())
+                self.updateConfig("Instrument Settings", "Lock-in Model", self.Lockin_Model.get())
+                print("Invalid Lock-in Settings")
         if isStrInt(self.SignalGen_GPIB.get()):
-            self.updateConfig("Instrument Settings", "Signal-Gen GPIB", self.SignalGen_GPIB.get())
-        
-        self.updateConfig("Instrument Settings", "Lock-in Model", self.Lockin_Model.get())
-        self.updateConfig("Instrument Settings", "Signal-Gen Model", self.SignalGen_Model.get())
-        
-        if self.config["Instrument Settings"]["Lock-in Model"] == "LI 5640":
-            self.lockin = LOCKIN.LI5640("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
-        elif self.config["Instrument Settings"]["Lock-in Model"] == "SR 830":
-            self.lockin = LOCKIN.SR830("GPIB0::"+self.config["Instrument Settings"]["Lock-in GPIB"]+"::INSTR")
-        else:
-            print("Invalid Lock-in Instrument Type: Reset Config File")
-        if self.config["Instrument Settings"]["Signal-Gen Model"] == "Keysight" or self.config["Instrument Settings"]["Signal-Gen Model"] == "Agilent":
-            self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
-        else:
-            print("Invalid Signal-Gen Instrument Type: Reset Config File")
+            NewGenSet = self.set_signalgen(self.SignalGen_Model.get(), self.SignalGen_GPIB.get())
+            if NewGenSet:
+                self.updateConfig("Instrument Settings", "Signal-Gen GPIB", self.SignalGen_GPIB.get())
+                self.updateConfig("Instrument Settings", "Signal-Gen Model", self.SignalGen_Model.get())
+            else:
+                print("Invalid Signal Gen Settings")
         
         if self.Save_Folder_entry.get() != self.config["Monitor Save Settings"]["Save Folder"]:
             self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder.get())
@@ -531,11 +534,15 @@ class tkApp(tk.Tk):
             next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
             self.fit_Label.config(text="Next Fit File:        "+next_fit_name)
         
-        if self.TF_savename != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
-            self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
-            self.TFdata.TF_name = self.TF_savename.get()
-            self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
-            
+        try:
+            if self.TF_savename != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
+                self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
+                self.TFdata.TF_name = self.TF_savename.get()
+                self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
+        except:
+            pass
+        
+        
         if isStrFloat(self.current_amp_entry.get()):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
             self.TFdata.set_current_amp(float(self.current_amp_entry.get())) 
@@ -547,6 +554,31 @@ class tkApp(tk.Tk):
             except:
                 print("Drive Not Set")
 
+    def set_lockin(self, model, GPIB):
+        try:
+            if model == "LI 5640":
+                self.lockin = LOCKIN.LI5640("GPIB0::"+GPIB+"::INSTR")
+            elif model == "SR 830":
+                self.lockin = LOCKIN.SR830("GPIB0::"+GPIB+"::INSTR")
+            elif model == "Testing":
+                print("lock-in is in testing mode")
+            else:
+                print("Invalid Lock-in Instrument Type: Reset Config File")
+            return True
+        except:
+            return False
+    
+    def set_signalgen(self, model, GPIB):
+        try:
+            if model == "Keysight" or model == "Agilent":
+                self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
+            elif model == "Testing":
+                print("signal-gen is in testing mode")
+            else:
+                print("Invalid Signal-Gen Instrument Type: Reset Config File")
+            return True
+        except:
+            return False
 
     def on_key_press(self, event):
         print("you pressed {}".format(event.key))
