@@ -246,11 +246,11 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
         self.ay = self.fig.add_subplot(2,1,2)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
         self.ay2 = self.fig2.add_subplot(2,1,2)
         
@@ -272,14 +272,14 @@ class tkApp(tk.Tk):
 
         
         self.param_entry_frame = tk.Frame(self)
-        self.param_entry_frame.place(x="1i", y="8.25i")
+        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         self.param_label_frame = tk.Frame(self)
-        self.param_label_frame.place(x="2i", y="8.25i")
+        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         
         self.param_entry_frame_2 = tk.Frame(self)
-        self.param_entry_frame_2.place(x="4i", y="8.25i")
+        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         self.param_label_frame_2 = tk.Frame(self)
-        self.param_label_frame_2.place(x="5i", y="8.25i")
+        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
@@ -342,7 +342,7 @@ class tkApp(tk.Tk):
         self.settings_button.pack(in_=self.settings_frame, side=tk.RIGHT, padx=5, pady=5)
         
         self.start_button = tk.Button(master=self, text="Start", bg='green', fg='white', height=2, width=9, command=self.start)
-        self.start_button.place(x="{}i".format(10-0.4), y="8.5i")
+        self.start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(8.5*self.scaling_factor["y"]))
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
@@ -404,14 +404,18 @@ class tkApp(tk.Tk):
             
     def init_window_size(self):
         self.update_idletasks()
+        self.standard_dpi = 96 # 1080p monitors
+        standard_screen_size = {"x":1920, "y":1080}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
         self.screen_size_inches = {"width": 20, "height": 11.25}
         
         self.monitor_dpi = self.screen_size["x"]/self.screen_size_inches["width"]
         self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
-        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.monitor_dpi, 
-                                "height": self.win_zoom_size["y"]/self.monitor_dpi}
+        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.standard_dpi, 
+                                "height": self.win_zoom_size["y"]/self.standard_dpi}
+        self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
+                               "y": self.winfo_height()/standard_screen_size["y"]}
     
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
