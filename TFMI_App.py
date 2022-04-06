@@ -246,11 +246,11 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
         self.ax = self.fig.add_subplot(2,1,1)
         self.ay = self.fig.add_subplot(2,1,2)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=96)
         self.ax2 = self.fig2.add_subplot(2,1,1)
         self.ay2 = self.fig2.add_subplot(2,1,2)
         
@@ -272,14 +272,14 @@ class tkApp(tk.Tk):
 
         
         self.param_entry_frame = tk.Frame(self)
-        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame.place(x="1i", y="8.25i")
         self.param_label_frame = tk.Frame(self)
-        self.param_label_frame.place(x="{}i".format(2*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame.place(x="2i", y="8.25i")
         
         self.param_entry_frame_2 = tk.Frame(self)
-        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame_2.place(x="4i", y="8.25i")
         self.param_label_frame_2 = tk.Frame(self)
-        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame_2.place(x="5i", y="8.25i")
         
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
@@ -342,7 +342,7 @@ class tkApp(tk.Tk):
         self.settings_button.pack(in_=self.settings_frame, side=tk.RIGHT, padx=5, pady=5)
         
         self.start_button = tk.Button(master=self, text="Start", bg='green', fg='white', height=2, width=9, command=self.start)
-        self.start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(8.5*self.scaling_factor["y"]))
+        self.start_button.place(x="{}i".format(10-0.4), y="8.5i")
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
@@ -404,19 +404,14 @@ class tkApp(tk.Tk):
             
     def init_window_size(self):
         self.update_idletasks()
-        self.standard_dpi = 96 # 1080p monitors
-        standard_screen_size = {"x":1920, "y":1080}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
-        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.standard_dpi, "height": self.winfo_screenheight()/self.standard_dpi}
+        self.screen_size_inches = {"width": 20, "height": 11.25}
         
-        # self.monitor_dpi = int(self.screen_size["x"]/self.screen_size_inches["width"])
+        self.monitor_dpi = self.screen_size["x"]/self.screen_size_inches["width"]
         self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
-        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.standard_dpi, 
-                                "height": self.win_zoom_size["y"]/self.standard_dpi}
-        self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
-                               "y": self.winfo_height()/standard_screen_size["y"]}
-        # self.tk.call.scaling('tk', 'scaling', self.monitor_dpi/base_dpi)
+        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.monitor_dpi, 
+                                "height": self.win_zoom_size["y"]/self.monitor_dpi}
     
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
@@ -524,6 +519,7 @@ class tkApp(tk.Tk):
             if NewLockinSet:
                 self.updateConfig("Instrument Settings", "Lock-in GPIB", self.Lockin_GPIB.get())
                 self.updateConfig("Instrument Settings", "Lock-in Model", self.Lockin_Model.get())
+            else:
                 print("Invalid Lock-in Settings")
         if isStrInt(self.SignalGen_GPIB.get()):
             NewGenSet = self.set_signalgen(self.SignalGen_Model.get(), self.SignalGen_GPIB.get())
@@ -537,13 +533,13 @@ class tkApp(tk.Tk):
             self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder.get())
             self.TFdata.save_folder = self.Save_Folder_entry.get()
             next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
-            self.fit_Label.config(text="Next Fit File:        "+next_fit_name)
+            self.fit_Label.config(text="Next Fit File: \t\t"+next_fit_name)
         
         try:
-            if self.TF_savename != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
+            if self.TF_savename.get() != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
                 self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
                 self.TFdata.TF_name = self.TF_savename.get()
-                self.sweep_label.config(text="Current Sweep Folder: "+"\data\{}\sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
+                self.sweep_label.config(text="Current Sweep Folder: \t"+"/data/{}/sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
         except:
             pass
         
@@ -576,7 +572,7 @@ class tkApp(tk.Tk):
     def set_signalgen(self, model, GPIB):
         try:
             if model == "Keysight" or model == "Agilent":
-                self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+self.config["Instrument Settings"]["Signal-Gen GPIB"]+"::INSTR")
+                self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+GPIB+"::INSTR")
             elif model == "Testing":
                 print("signal-gen is in testing mode")
             else:
@@ -590,14 +586,23 @@ class tkApp(tk.Tk):
         key_press_handler(event, self.canvas, self.toolbar)
         
     def update_sweep_params(self):
+        old_params = self.params
         for idx, (key, val) in enumerate(self.params.items()):
             try:
                 if self.entry_list[idx].get() != '':
-                    self.params[key] = int(self.entry_list[idx].get())
+                    self.params[key] = self.entry_list[idx].get()
                     if key == "Drive, V":
-                        self.gen.Set_Voltage(float(self.entry_list[idx].get()))
+                        try:
+                            self.gen.Set_Voltage(float(self.entry_list[idx].get()))
+                        except:
+                            self.params[key] = old_params[key]
+                            print("Drive Not Set Properly")
                     if key == "Phase, deg":
-                        self.lockin.Set_Phase(float(self.entry_list[idx].get()))
+                        try:
+                            self.lockin.Set_Phase(float(self.entry_list[idx].get()))
+                        except:
+                            self.params[key] = old_params[key]
+                            print("Phase Not Set Properly")
                     self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
                     self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
                     self.entry_list[idx].delete(0, 'end')
