@@ -223,9 +223,6 @@ class tkApp(tk.Tk):
             self.lockin.Set_Phase(float(self.config["Frequency Sweep Settings"]["Phase, deg"]))
         except:
             print("Phase Not Set Properly")
-            
-            
-        
         
         self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
                         "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
@@ -246,11 +243,11 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
         self.ay = self.fig.add_subplot(2,1,2)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
         self.ay2 = self.fig2.add_subplot(2,1,2)
         
@@ -270,22 +267,21 @@ class tkApp(tk.Tk):
         self.canvas2.get_tk_widget().pack(in_=self.graph_2)
         self.canvas2.mpl_connect("key_press_event", self.on_key_press)
 
-        
         self.param_entry_frame = tk.Frame(self)
-        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         self.param_label_frame = tk.Frame(self)
-        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame.place(x="{}i".format(2*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         
         self.param_entry_frame_2 = tk.Frame(self)
-        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         self.param_label_frame_2 = tk.Frame(self)
-        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
         
         self.checkbox_frame = tk.Frame(self)
-        self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+self.win_zoom_inches["width"]/2*4.8/6.4))
+        self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*4.8/6.4))
         
         self.option_frame = tk.Frame(self)
-        self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+self.win_zoom_inches["width"]/2*4.8/6.4))
+        self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+graph_size*self.win_zoom_inches["width"]/2*4.8/6.4))
         
         self.tracking_button = tk.Button(self.checkbox_frame, text="Update Tracking Range", padx=10, command=self.update_tracking_range)
         self.tracking_button.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
@@ -408,14 +404,16 @@ class tkApp(tk.Tk):
         standard_screen_size = {"x":1920, "y":1080}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
-        self.screen_size_inches = {"width": 20, "height": 11.25}
+        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.standard_dpi, 
+                                    "height": self.winfo_screenheight()/self.standard_dpi}
         
-        self.monitor_dpi = self.screen_size["x"]/self.screen_size_inches["width"]
         self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
+        
         self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.standard_dpi, 
                                 "height": self.win_zoom_size["y"]/self.standard_dpi}
         self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
                                "y": self.winfo_height()/standard_screen_size["y"]}
+        
     
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
@@ -500,7 +498,7 @@ class tkApp(tk.Tk):
         
         # TF Name
         self.drive_entry = tk.Entry(sWin, width=12)
-        self.drive_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Drive"]))
+        self.drive_entry.insert(0, self.config["Frequency Sweep Settings"]["Drive"])
         self.drive_entry.place(anchor="nw", x=400, y=150)
         
         Drive_Label = tk.Label(sWin, text="Drive, V")
@@ -546,18 +544,44 @@ class tkApp(tk.Tk):
                 self.sweep_label.config(text="Current Sweep Folder: \t"+"/data/{}/sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
         except:
             pass
-        
-        
         if isStrFloat(self.current_amp_entry.get()):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
-            self.TFdata.set_current_amp(float(self.current_amp_entry.get())) 
+            self.TFdata.set_current_amp(float(self.current_amp_entry.get()))
+            
         if isStrFloat(self.drive_entry.get()):
-            self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
-            self.TFdata.set_drive(float(self.drive_entry.get()))
             try:
-                self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
+                self.gen.Set_Voltage(float(self.drive_entry.get()))
+                self.TFdata.set_drive(float(self.drive_entry.get()))
+                self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
+                self.label_list[5].config(text="Drive, V: "+self.drive_entry.get())
             except:
+                self.Drive_Label.delete(0, 'end')
+                self.Drive_Label.insert(0, self.config["Frequency Sweep Settings"]["Drive"])
                 print("Drive Not Set")
+                
+    def update_sweep_params(self):
+        old_params = self.params
+        for idx, (key, val) in enumerate(self.params.items()):
+            try:
+                if self.entry_list[idx].get() != '':
+                    self.params[key] = self.entry_list[idx].get()
+                    if key == "Drive, V":
+                        try:
+                            self.gen.Set_Voltage(float(self.entry_list[idx].get()))
+                        except:
+                            self.params[key] = old_params[key]
+                            print("Drive Not Set Properly")
+                    if key == "Phase, deg":
+                        try:
+                            self.lockin.Set_Phase(float(self.entry_list[idx].get()))
+                        except:
+                            self.params[key] = old_params[key]
+                            print("Phase Not Set Properly")
+                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
+                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
+                    self.entry_list[idx].delete(0, 'end')
+            except Exception as e:
+                print(e)
 
     def set_lockin(self, model, GPIB):
         try:
@@ -589,31 +613,6 @@ class tkApp(tk.Tk):
         print("you pressed {}".format(event.key))
         key_press_handler(event, self.canvas, self.toolbar)
         
-    def update_sweep_params(self):
-        old_params = self.params
-        for idx, (key, val) in enumerate(self.params.items()):
-            try:
-                if self.entry_list[idx].get() != '':
-                    self.params[key] = self.entry_list[idx].get()
-                    if key == "Drive, V":
-                        try:
-                            self.gen.Set_Voltage(float(self.entry_list[idx].get()))
-                        except:
-                            self.params[key] = old_params[key]
-                            print("Drive Not Set Properly")
-                    if key == "Phase, deg":
-                        try:
-                            self.lockin.Set_Phase(float(self.entry_list[idx].get()))
-                        except:
-                            self.params[key] = old_params[key]
-                            print("Phase Not Set Properly")
-                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
-                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
-                    self.entry_list[idx].delete(0, 'end')
-                    
-                    
-            except Exception as e:
-                print(e)
         
     def update_tracking_range(self):
         if self.tracking_entry.get() != '' and isStrFloat(self.tracking_entry.get()):
