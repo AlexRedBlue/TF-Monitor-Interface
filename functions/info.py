@@ -52,3 +52,10 @@ def isStrFloat(text):
         return True
     except:
         return False
+    
+def phaseAdjust(theta):
+    if theta % 180 == theta % 360:
+        return theta % 180
+    else:
+        return theta % -180
+    

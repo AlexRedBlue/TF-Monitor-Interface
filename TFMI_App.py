@@ -29,7 +29,7 @@ from tuning_fork import Lorentz_Fitting as LF
 # TFdata Class
 from tuning_fork.tuning_fork_data import TFdata
 # Useful Functions
-from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat
+from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
 class tkApp(tk.Tk):
     
@@ -514,11 +514,7 @@ class tkApp(tk.Tk):
         self.label_list[1].config(text = "End Frequency: {:.3f}".format(new_end))
         
     def phaseCorrection(self):
-        if (self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) > 0:
-            self.params['Phase, deg'] = ((self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) % 180)
-        else:
-            self.params['Phase, deg'] = ((self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) % -180)
-        # print(self.params['Phase, deg'])
+        self.params['Phase, deg'] = phaseAdjust(self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi)
         self.lockin.Set_Phase(self.params['Phase, deg'])
         self.updateConfig('Frequency Sweep Settings', "Phase, deg", self.params['Phase, deg'])
         self.label_list[2].config(text = "Phase, deg: {:.2f}".format(self.params['Phase, deg']))
