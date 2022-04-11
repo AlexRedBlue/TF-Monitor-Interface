@@ -224,8 +224,8 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'End Frequency', '32900')
         self.config.set('Frequency Sweep Settings', 'Phase, deg', '0')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
-        self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1')
-        self.config.set('Frequency Sweep Settings', 'Drive', '1')
+        self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1000')
+        self.config.set('Frequency Sweep Settings', 'Drive', '0.1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
         
         self.config.add_section("Instrument Settings")
@@ -577,12 +577,15 @@ class tkApp(tk.Tk):
     def sweep(self):
         self.TFdata.reset_sweep()
         frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
+        update_frequency = 100 # in ms
+        update_time_passed = 0
         self.gen.Set_Frequency(self.params["Start Frequency"])
-        self.after(3*self.params["Wait Time, ms"])
+        while update_time_passed < 3*int(self.params["Wait Time, ms"]):
+            self.after(update_frequency, self.update())
+            update_time_passed += update_frequency
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                update_frequency = 100 # in ms
                 update_time_passed = 0
                 while update_time_passed < int(self.params["Wait Time, ms"]):
                     self.after(update_frequency, self.update())
