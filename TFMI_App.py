@@ -13,9 +13,6 @@ import tkinter as tk
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
 
-# from instruments import TEST_LOCKIN
-# from instruments import TEST_SIGNAL_GEN
-
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
@@ -24,161 +21,15 @@ from matplotlib.figure import Figure
 
 import configparser
 import os
-
 import time
-from datetime import datetime
-from datetime import timedelta
 
 import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
-def ticks_to_hours(graph, time_start, time_end):
-    new_ticks = []
-    xlabels = []
-    time_start, time_end = time_start/3600, time_end/3600
-    # time if time length of data is < 30 minutes, use 7 HH:MM:SS; otherwise 9 HH:MM
-    if (time_end - time_start)*60 < 30:
-        ticks = np.linspace(time_start, time_end, 7)
-        for idx, val in enumerate(ticks):
-            dt = str(timedelta(seconds=int(val*3600)))
-            if dt not in xlabels:
-                xlabels.append(dt)
-                new_ticks.append(val*3600)
-    else:
-        ticks = np.linspace(time_start, time_end, 9)
-        for idx, val in enumerate(ticks):
-            dt = str(timedelta(seconds=int(val*3600))).split(":")
-            try:
-                time = float(dt[0]) + float(dt[1])/60
-            except:
-                time = val
-            dt = dt[0]+":"+dt[1]
-            if dt not in xlabels:
-                xlabels.append(dt)
-                new_ticks.append(time*3600)
-
-    graph.set_xticks(new_ticks)
-    graph.set_xticklabels(xlabels)
-
-def close_win(top):
-        top.destroy()
-        
-def isStrInt(text):
-    try:
-        int(text)
-        return True
-    except:
-        return False
-    
-def isStrFloat(text):
-    try:
-        float(text)
-        return True
-    except:
-        return False
-    
-class TFdata:
-    def __init__(self, TF_name, save_folder):
-        self.current_working_dir = os.getcwd()
-        self.TF_name = TF_name
-        self.save_folder = save_folder
-        self.get_today()
-        self.set_drive(1)
-        self.set_current_amp(1)
-        self.store_last_sweep([])
-        x_header = "\tx:Frequency, Hz\tx:Amplitude, V\tx:Width, Hz\tx:Phase, Rad\tx:Background intercept, V\tx:Background slope, dV/df\tx:Background quadratic, d2V/d2f"
-        y_header = "\ty:Frequency, Hz\ty:Amplitude, V\ty:Width, Hz\ty:Phase, Rad\ty:Background intercept, V\ty:Background slope, dV/df\ty:Background quadratic, d2V/d2f"
-        self.header = "Time, s\tDrive, V\tCurrent Amp"+x_header+y_header
-        self.sweep_header = "Time, s\tFrequency, hz\tVx, V\tVy, V\tDrive, V\tCurrent Amp"
-        self.reset_sweep()
-        self.reset_fits()
-        self.reset_saved_fits()
-        self.reset_save_time()
-
-    def get_today(self):
-        now = datetime.now()
-        self.today = datetime(year=now.year, month=now.month, day=now.day)
-        self.timestamp_today = time.mktime(self.today.timetuple())
-        self.today = self.today.strftime("%Y-%m-%d")
-        
-    def store_last_sweep(self, sweep):
-        self.last_sweep = np.array(sweep)
-        
-    def set_drive(self, value):
-        self.drive = value
-        
-    def set_current_amp(self, value):
-        self.current_amp=value
-        
-    def reset_save_time(self):
-        self.last_save = time.time()
-        if self.saved_fits.ndim > 1:
-            self.saved_fits = np.concatenate((self.saved_fits, np.array(self.fits)))
-        else:
-            self.saved_fits = np.array(self.fits)
-        self.reset_fits()
-        
-    def reset_fits(self):
-        self.fits = []
-    
-    def reset_saved_fits(self):
-        self.saved_fits = np.array([])
-        
-    def daily_save(self):
-        self.save_fits()
-        self.reset_save_time()
-        self.reset_fits()
-        self.reset_saved_fits()
-        self.get_today()
-        
-    def reset_sweep(self):
-        self.sweep = []
-        
-    def append_sweep(self, new_values):
-        if np.array(new_values).ndim == 1: 
-            self.sweep.append(new_values)
-            
-    def append_fits(self, new_values):
-        if np.array(new_values).ndim == 1: 
-            self.fits.append(new_values)
-            
-    def fit_sweep(self):
-        self.sweep = np.array(self.sweep)
-        self.store_last_sweep(self.sweep)
-        if self.sweep.ndim > 1:
-            guess = [(self.sweep[-1, 1]+self.sweep[0, 1])/2, 0, (self.sweep[-1, 1]-self.sweep[0, 1])/8, 0, 0, 0, 0]
-            self.xfit, xflag = LF.Lorentz_Fit_X_quad(self.sweep[:, 1], self.sweep[:, 2], guess)
-            self.xfit[0], self.xfit[2] = np.abs(self.xfit[0]), np.abs(self.xfit[2])
-            self.yfit, yflag = LF.Lorentz_Fit_Y_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
-            self.yfit[0], self.yfit[2] = np.abs(self.yfit[0]), np.abs(self.yfit[2])
-        if xflag in [1,2,3,4]:
-            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *self.xfit, *self.yfit])
-        return xflag
-        
-        
-    def getfilename(self, directory, file_tag, num=0):
-        fname = self.current_working_dir+r"/data/{}/{}__{}.dat".format(directory, file_tag, num)
-        if os.path.isdir(self.current_working_dir+"/data/"+directory) == False:
-            os.makedirs(self.current_working_dir+"/data/"+directory)
-        if os.path.isfile(fname):
-            return self.getfilename(directory, file_tag, num+1)
-        return fname
-        
-    def save_fits(self):
-        if np.array(self.fits).ndim > 1:
-            fname = self.getfilename(self.save_folder+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
-            if self.header is not None:
-                np.savetxt(fname, np.array(self.fits), header=self.header, delimiter='\t')
-            else:
-                np.savetxt(fname, np.array(self.fits), delimiter='\t')
-            
-    def save_sweep(self):
-        fname = self.getfilename(self.save_folder+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
-        if self.sweep_header is not None:
-            np.savetxt(fname, np.array(self.sweep), header=self.sweep_header, delimiter='\t')
-        else:
-            np.savetxt(fname, np.array(self.sweep), delimiter='\t')
-            
+# TFdata Class
+from tuning_fork.tuning_fork_data import TFdata
+# Useful Functions
+from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat
 
 class tkApp(tk.Tk):
     
@@ -304,7 +155,10 @@ class tkApp(tk.Tk):
                 self.entry_list.append(tk.Entry(self.param_entry_frame, width=8))
                 self.entry_list[-1].pack(in_=self.param_entry_frame, pady=5)
             else:
-                self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {:.3f}".format(val)))
+                if key == "Num Pts":
+                    self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {}".format(val)))
+                else:
+                    self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {:.3f}".format(val)))
                 self.label_list[-1].pack(in_=self.param_label_frame_2, pady=5)
                 
                 self.entry_list.append(tk.Entry(self.param_entry_frame_2, width=8))
@@ -329,10 +183,18 @@ class tkApp(tk.Tk):
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
-        self.showGraph = tk.StringVar(self)
-        self.showGraph.set("Frequency Sweep") # default value
-        self.showGraph_Options = tk.OptionMenu(self, self.showGraph, "Frequency Sweep", "Fit Details", command=self.switchGraph)
-        self.showGraph_Options.pack(in_=self.option_frame)
+        self.graph_option_list = ["Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_labels      = ["$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        
+        self.whichGraph_1 = tk.StringVar(self)
+        self.whichGraph_1.set(self.graph_option_list[2]) # default value
+        self.whichGraph_1_Options = tk.OptionMenu(self, self.whichGraph_1, *self.graph_option_list, command=self.switchGraph)
+        self.whichGraph_1_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(2*self.scaling_factor["y"]))
+        
+        self.whichGraph_2 = tk.StringVar(self)
+        self.whichGraph_2.set(self.graph_option_list[0]) # default value
+        self.whichGraph_2_Options = tk.OptionMenu(self, self.whichGraph_2, *self.graph_option_list, command=self.switchGraph)
+        self.whichGraph_2_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(4*self.scaling_factor["y"]))
         
         self.settings_button = tk.Button(master=self, text="Settings", command=self.settingsWindow)
         self.settings_button.pack(in_=self.settings_frame, side=tk.RIGHT, padx=5, pady=5)
@@ -564,7 +426,10 @@ class tkApp(tk.Tk):
         for idx, (key, val) in enumerate(self.params.items()):
             try:
                 if self.entry_list[idx].get() != '':
-                    self.params[key] = self.entry_list[idx].get()
+                    if key == "Num Pts":
+                        self.params[key] = int(self.entry_list[idx].get())
+                    else:
+                        self.params[key] = float(self.entry_list[idx].get())
                     if key == "Drive, V":
                         try:
                             self.gen.Set_Voltage(float(self.entry_list[idx].get()))
@@ -577,8 +442,8 @@ class tkApp(tk.Tk):
                         except:
                             self.params[key] = old_params[key]
                             print("Phase Not Set Properly")
-                    self.updateConfig('Frequency Sweep Settings', key, self.entry_list[idx].get())
-                    self.label_list[idx].config(text=key+": {}".format(float(self.entry_list[idx].get())))
+                    self.updateConfig('Frequency Sweep Settings', key, self.params[key])
+                    self.label_list[idx].config(text=key+": {}".format(self.params[key]))
                     self.entry_list[idx].delete(0, 'end')
             except Exception as e:
                 print(e)
@@ -657,10 +522,7 @@ class tkApp(tk.Tk):
         
     
     def switchGraph(self, event):
-        if event == "Frequency Sweep":
-            self.graph_sweep()
-        if event == "Fit Details":
-            self.graph_fits() 
+        self.graph_fits() 
         self.update_idletasks()
         self.update()
 
@@ -687,24 +549,25 @@ class tkApp(tk.Tk):
         
         self.ax2.clear()
         self.ay2.clear()
+        
         if self.TFdata.saved_fits.ndim > 1:
-            self.ax2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 5])
-            self.ay2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3])
+            self.ax2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time0 = self.TFdata.saved_fits[0, 0]
             time1 = self.TFdata.saved_fits[-1,0]
         if np.asarray(self.TFdata.fits).ndim > 1:
-            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 5])
-            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3])
+            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time1 = self.TFdata.fits[-1][0]
             if self.TFdata.saved_fits.ndim < 2:
                 time0 = self.TFdata.fits[0][0]
-
+        
         if self.TFdata.saved_fits.ndim > 1 or np.asarray(self.TFdata.fits).ndim > 1: 
             ticks_to_hours(self.ay2, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
           
         self.ax2.set_title("Fit Values")
-        self.ax2.set_ylabel("Width, hz")
-        self.ay2.set_ylabel("$f_0$, hz")
+        self.ax2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_1.get())])
+        self.ay2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_2.get())])
         self.ay2.set_xlabel("time")
         
         self.canvas2.draw()
@@ -718,7 +581,9 @@ class tkApp(tk.Tk):
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                self.after(self.params["Wait Time, ms"])
+                update_frequency = 5
+                for i in range(update_frequency):
+                    self.after(int(self.params["Wait Time, ms"]/update_frequency), self.update())
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 # if self.showGraph.get() == "Frequency Sweep":
@@ -736,21 +601,22 @@ class tkApp(tk.Tk):
         while self.run:
             try:
                 sweep_finished = self.sweep()
-                self.TFdata.save_sweep()
-                if self.fitBool.get() and sweep_finished:
-                    xflag = self.TFdata.fit_sweep()
-                    if xflag in [1,2,3,4]:
-                        if self.trackBool:
-                            self.tracking()
-                        if self.correctPhaseBool:
-                            self.phaseCorrection()
-                    # if self.showGraph.get() == "Fit Details":
-                    self.graph_fits()
-                    if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
-                        self.TFdata.save_fits()
-                        self.TFdata.reset_save_time()
-                    if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
-                        self.TFdata.daily_save()
+                if sweep_finished:
+                    self.TFdata.save_sweep()
+                    if self.fitBool.get():
+                        xflag = self.TFdata.fit_sweep()
+                        if xflag in [1,2,3,4]:
+                            if self.trackBool.get():
+                                self.tracking()
+                            if self.correctPhaseBool.get():
+                                self.phaseCorrection()
+                        # if self.showGraph.get() == "Fit Details":
+                        self.graph_fits()
+                        if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+                            self.TFdata.save_fits()
+                            self.TFdata.reset_save_time()
+                        if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                            self.TFdata.daily_save()
                 
             except Exception as e:
                 print(e)
