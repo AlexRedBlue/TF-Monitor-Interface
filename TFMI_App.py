@@ -514,7 +514,10 @@ class tkApp(tk.Tk):
         self.label_list[1].config(text = "End Frequency: {:.3f}".format(new_end))
         
     def phaseCorrection(self):
-        self.params['Phase, deg'] = self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi
+        if (self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) > 0:
+            self.params['Phase, deg'] = ((self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) % 180)
+        else:
+            self.params['Phase, deg'] = ((self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi) % -180)
         # print(self.params['Phase, deg'])
         self.lockin.Set_Phase(self.params['Phase, deg'])
         self.updateConfig('Frequency Sweep Settings', "Phase, deg", self.params['Phase, deg'])
