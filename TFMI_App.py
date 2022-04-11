@@ -578,18 +578,24 @@ class tkApp(tk.Tk):
         self.TFdata.reset_sweep()
         frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
         update_frequency = 100 # in ms
-        update_time_passed = 0
+        update_time_left = 3*int(self.params["Wait Time, ms"])
         self.gen.Set_Frequency(self.params["Start Frequency"])
-        while update_time_passed < 3*int(self.params["Wait Time, ms"]):
-            self.after(update_frequency, self.update())
-            update_time_passed += update_frequency
+        while update_time_left > 0:
+            if update_time_left > update_frequency:
+                self.after(update_frequency, self.update())
+            else:
+                self.after(update_time_left, self.update())
+            update_time_left -= update_frequency
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                update_time_passed = 0
-                while update_time_passed < int(self.params["Wait Time, ms"]):
-                    self.after(update_frequency, self.update())
-                    update_time_passed += update_frequency
+                update_time_left = int(self.params["Wait Time, ms"])
+                while update_time_left > 0:
+                    if update_time_left > update_frequency:
+                        self.after(update_frequency, self.update())
+                    else:
+                        self.after(update_time_left, self.update())
+                    update_time_left += update_frequency
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 # if self.showGraph.get() == "Frequency Sweep":
