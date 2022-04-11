@@ -87,6 +87,8 @@ class tkApp(tk.Tk):
         self.wm_title("Freq Sweep Alpha")
         
         graph_size = 0.8
+        # graph_ratio = 4.8/6.4
+        graph_ratio = 1
         padding = (1-graph_size)/2*(self.win_zoom_inches["width"]/2)
         
         self.graph_1 = tk.Frame(self)
@@ -94,11 +96,11 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
         self.ay = self.fig.add_subplot(2,1,2)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*4.8/6.4), dpi=self.standard_dpi)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
         self.ay2 = self.fig2.add_subplot(2,1,2)
         
@@ -119,20 +121,20 @@ class tkApp(tk.Tk):
         self.canvas2.mpl_connect("key_press_event", self.on_key_press)
 
         self.param_entry_frame = tk.Frame(self)
-        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         self.param_label_frame = tk.Frame(self)
-        self.param_label_frame.place(x="{}i".format(2*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame.place(x="{}i".format(2*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         
         self.param_entry_frame_2 = tk.Frame(self)
-        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_entry_frame_2.place(x="{}i".format(4*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         self.param_label_frame_2 = tk.Frame(self)
-        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*4.8/6.4+0.75))
+        self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         
         self.checkbox_frame = tk.Frame(self)
-        self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*4.8/6.4))
+        self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
         self.option_frame = tk.Frame(self)
-        self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+graph_size*self.win_zoom_inches["width"]/2*4.8/6.4))
+        self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
         self.tracking_button = tk.Button(self.checkbox_frame, text="Update Tracking Range", padx=10, command=self.update_tracking_range)
         self.tracking_button.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
@@ -580,9 +582,11 @@ class tkApp(tk.Tk):
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                update_frequency = 5
-                for i in range(update_frequency):
-                    self.after(int(self.params["Wait Time, ms"]/update_frequency), self.update())
+                update_frequency = 100 # in ms
+                update_time_passed = 0
+                while update_time_passed < int(self.params["Wait Time, ms"]):
+                    self.after(update_frequency, self.update())
+                    update_time_passed += update_frequency
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 # if self.showGraph.get() == "Frequency Sweep":
