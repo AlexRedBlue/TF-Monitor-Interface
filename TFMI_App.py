@@ -595,7 +595,7 @@ class tkApp(tk.Tk):
                         self.after(update_frequency, self.update())
                     else:
                         self.after(update_time_left, self.update())
-                    update_time_left += update_frequency
+                    update_time_left -= update_frequency
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 # if self.showGraph.get() == "Frequency Sweep":
