@@ -79,7 +79,7 @@ class tkApp(tk.Tk):
                         "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
                         "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
                         "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
-                        "Wait Time, ms": int(float(self.config["Frequency Sweep Settings"]["Wait Time, ms"])),
+                        "Wait Time, ms": int(self.config["Frequency Sweep Settings"]["Wait Time, ms"]),
                         "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
                       }
         
@@ -157,7 +157,7 @@ class tkApp(tk.Tk):
                 self.entry_list.append(tk.Entry(self.param_entry_frame, width=8))
                 self.entry_list[-1].pack(in_=self.param_entry_frame, pady=5)
             else:
-                if key == "Num Pts":
+                if key == "Num Pts" or key == "Wait Time, ms":
                     self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {}".format(val)))
                 else:
                     self.label_list.append(tk.Label(self.param_label_frame_2, text = key+": {:.3f}".format(val)))
@@ -428,10 +428,11 @@ class tkApp(tk.Tk):
         for idx, (key, val) in enumerate(self.params.items()):
             try:
                 if self.entry_list[idx].get() != '':
-                    if key == "Num Pts":
+                    if key == "Num Pts" or key == "Wait Time, ms":
                         self.params[key] = int(self.entry_list[idx].get())
                     else:
                         self.params[key] = float(self.entry_list[idx].get())
+                    
                     if key == "Drive, V":
                         try:
                             self.gen.Set_Voltage(float(self.entry_list[idx].get()))
@@ -516,7 +517,7 @@ class tkApp(tk.Tk):
         self.label_list[1].config(text = "End Frequency: {:.3f}".format(new_end))
         
     def phaseCorrection(self):
-        self.params['Phase, deg'] = phaseAdjust(self.params['Phase, deg']-self.TFdata.xfit[3]*180/np.pi)
+        self.params['Phase, deg'] = phaseAdjust(self.params['Phase, deg']-(self.TFdata.xfit[3]*180/np.pi))
         self.lockin.Set_Phase(self.params['Phase, deg'])
         self.updateConfig('Frequency Sweep Settings', "Phase, deg", self.params['Phase, deg'])
         self.label_list[2].config(text = "Phase, deg: {:.2f}".format(self.params['Phase, deg']))
