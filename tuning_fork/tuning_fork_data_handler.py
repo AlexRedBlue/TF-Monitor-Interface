@@ -8,6 +8,7 @@ Created on Mon Apr 11 13:49:03 2022
 import os
 import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
+from tuning_fork.TF_visc import Meas_Temp
 
 from datetime import datetime
 import time
@@ -23,7 +24,7 @@ class TFdata:
         self.store_last_sweep([])
         x_header = "\tx:Frequency, Hz\tx:Amplitude, V\tx:Width, Hz\tx:Phase, Rad\tx:Background intercept, V\tx:Background slope, dV/df\tx:Background quadratic, d2V/d2f"
         y_header = "\ty:Frequency, Hz\ty:Amplitude, V\ty:Width, Hz\ty:Phase, Rad\ty:Background intercept, V\ty:Background slope, dV/df\ty:Background quadratic, d2V/d2f"
-        self.header = "Time, s\tDrive, V\tCurrent Amp"+x_header+y_header
+        self.header = "Time, s\tDrive, V\tCurrent Amp\tTemperature, K"+x_header+y_header
         self.sweep_header = "Time, s\tFrequency, hz\tVx, V\tVy, V\tDrive, V\tCurrent Amp"
         self.reset_sweep()
         self.reset_fits()
@@ -52,6 +53,7 @@ class TFdata:
         else:
             self.saved_fits = np.array(self.fits)
         self.reset_fits()
+
         
     def reset_fits(self):
         self.fits = []
@@ -77,6 +79,7 @@ class TFdata:
         if np.array(new_values).ndim == 1: 
             self.fits.append(new_values)
             
+            
     def fit_sweep(self):
         self.sweep = np.array(self.sweep)
         self.store_last_sweep(self.sweep)
@@ -87,7 +90,8 @@ class TFdata:
             self.yfit, yflag = LF.Lorentz_Fit_Y_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             self.yfit[0], self.yfit[2] = np.abs(self.yfit[0]), np.abs(self.yfit[2])
         if xflag in [1,2,3,4]:
-            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, *self.xfit, *self.yfit])
+            self.T = Meas_Temp(width=self.xfit[2], frequency=self.xfit[0])
+            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
         return xflag
         
         

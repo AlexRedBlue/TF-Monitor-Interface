@@ -27,7 +27,7 @@ import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
 # TFdata Class
-from tuning_fork.tuning_fork_data import TFdata
+from tuning_fork.tuning_fork_data_handler import TFdata
 # Useful Functions
 from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
@@ -133,6 +133,9 @@ class tkApp(tk.Tk):
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
+        self.current_temp_label = tk.Label(master=self, text="Current Temp: ")
+        self.current_temp_label.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
+        
         self.option_frame = tk.Frame(self)
         self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
@@ -185,8 +188,8 @@ class tkApp(tk.Tk):
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
-        self.graph_option_list = ["Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
-        self.graph_labels      = ["$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         
         self.whichGraph_1 = tk.StringVar(self)
         self.whichGraph_1.set(self.graph_option_list[2]) # default value
@@ -574,6 +577,25 @@ class tkApp(tk.Tk):
         
         self.canvas2.draw()
         
+    def update_temp_label(self):
+        try:
+            if self.T > 100:
+                self.current_temp_label.config(text="Current Temp: {:.1f} K".format(self.TFdata.T))
+            elif self.T > 10:
+                self.current_temp_label.config(text="Current Temp: {:.2f} K".format(self.TFdata.T))
+            elif self.T > 1:
+                self.current_temp_label.config(text="Current Temp: {:.3f} K".format(self.TFdata.T))
+            elif self.T > 0.1:
+                self.current_temp_label.config(text="Current Temp: {:.1f} mK".format(1000*self.TFdata.T))
+            elif self.T > 0.01:
+                self.current_temp_label.config(text="Current Temp: {:.2f} mK".format(1000*self.TFdata.T))
+            elif self.T > 0.001:
+                self.current_temp_label.config(text="Current Temp: {:.3f} mK".format(1000*self.TFdata.T))
+            else:
+                self.current_temp_label.config(text="Current Temp: {:.1f} uK".format(1e6*self.TFdata.T))
+        except:
+            pass
+                
         
     def sweep(self):
         self.TFdata.reset_sweep()
@@ -619,6 +641,7 @@ class tkApp(tk.Tk):
                     if self.fitBool.get():
                         xflag = self.TFdata.fit_sweep()
                         if xflag in [1,2,3,4]:
+                            self.update_temp_label()
                             if self.trackBool.get():
                                 self.tracking()
                             if self.correctPhaseBool.get():
