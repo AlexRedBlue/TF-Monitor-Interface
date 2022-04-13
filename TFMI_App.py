@@ -192,12 +192,12 @@ class tkApp(tk.Tk):
         self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         
         self.whichGraph_1 = tk.StringVar(self)
-        self.whichGraph_1.set(self.graph_option_list[2]) # default value
+        self.whichGraph_1.set(self.graph_option_list[3]) # default value
         self.whichGraph_1_Options = tk.OptionMenu(self, self.whichGraph_1, *self.graph_option_list, command=self.switchGraph)
         self.whichGraph_1_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(2.5*self.scaling_factor["y"]))
         
         self.whichGraph_2 = tk.StringVar(self)
-        self.whichGraph_2.set(self.graph_option_list[0]) # default value
+        self.whichGraph_2.set(self.graph_option_list[1]) # default value
         self.whichGraph_2_Options = tk.OptionMenu(self, self.whichGraph_2, *self.graph_option_list, command=self.switchGraph)
         self.whichGraph_2_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(6*self.scaling_factor["y"]))
         
