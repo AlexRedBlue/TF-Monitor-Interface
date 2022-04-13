@@ -17,9 +17,9 @@ rhoHe3 = 81.898 # kg/m^3
 
 foVac_commFork = 32756.5 # Hz
 rhoq = 2659 # kg/m^3
-L = 3.1E-3
+L = 3E-3
 W = 0.1E-3
-T = 0.25E-3
+T = 0.23E-3
 C = 0.57
 S = 2*(T+W)*L
 mvac = 0.24267*rhoq*L*W*T # after Blaauwgeers

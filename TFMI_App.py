@@ -399,18 +399,18 @@ class tkApp(tk.Tk):
                 print("Invalid Signal Gen Settings")
         
         if self.Save_Folder_entry.get() != self.config["Monitor Save Settings"]["Save Folder"]:
-            self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder.get())
+            self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder_entry.get())
             self.TFdata.save_folder = self.Save_Folder_entry.get()
-            next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
-            self.fit_Label.config(text="Next Fit File: \t\t"+next_fit_name)
-        
-        try:
-            if self.TF_savename.get() != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
-                self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
-                self.TFdata.TF_name = self.TF_savename.get()
-                self.sweep_label.config(text="Current Sweep Folder: \t"+"/data/{}/sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today))
-        except:
-            pass
+
+        if self.TF_savename.get() != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
+            self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
+            self.TFdata.TF_name = self.TF_savename.get()
+
+        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        self.fit_Label.config(text="Next Fit File: \t\t"+next_fit_name)
+        next_sweep_name = "/data/{}/sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today)
+        self.sweep_label.config(text="Current Sweep Folder: \t"+next_sweep_name)
+
         if isStrFloat(self.current_amp_entry.get()):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
             self.TFdata.set_current_amp(float(self.current_amp_entry.get()))
@@ -502,8 +502,8 @@ class tkApp(tk.Tk):
         self.TFdata.save_fits()
     
     def tracking(self):
-        resonance = self.TFdata.fits[-1][3]
-        width = self.TFdata.fits[-1][5]
+        resonance = self.TFdata.xfit[0]
+        width = self.TFdata.xfit[2]
         new_start = resonance-self.tracking_range*width
         if new_start < 1:
             new_start = 1
@@ -579,17 +579,17 @@ class tkApp(tk.Tk):
         
     def update_temp_label(self):
         try:
-            if self.T > 100:
+            if self.TFdata.T > 100:
                 self.current_temp_label.config(text="Current Temp: {:.1f} K".format(self.TFdata.T))
-            elif self.T > 10:
+            elif self.TFdata.T > 10:
                 self.current_temp_label.config(text="Current Temp: {:.2f} K".format(self.TFdata.T))
-            elif self.T > 1:
+            elif self.TFdata.T > 1:
                 self.current_temp_label.config(text="Current Temp: {:.3f} K".format(self.TFdata.T))
-            elif self.T > 0.1:
+            elif self.TFdata.T > 0.1:
                 self.current_temp_label.config(text="Current Temp: {:.1f} mK".format(1000*self.TFdata.T))
-            elif self.T > 0.01:
+            elif self.TFdata.T > 0.01:
                 self.current_temp_label.config(text="Current Temp: {:.2f} mK".format(1000*self.TFdata.T))
-            elif self.T > 0.001:
+            elif self.TFdata.T > 0.001:
                 self.current_temp_label.config(text="Current Temp: {:.3f} mK".format(1000*self.TFdata.T))
             else:
                 self.current_temp_label.config(text="Current Temp: {:.1f} uK".format(1e6*self.TFdata.T))
