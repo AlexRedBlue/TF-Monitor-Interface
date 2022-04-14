@@ -12,6 +12,7 @@ import tkinter as tk
 
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
+from instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -314,12 +315,12 @@ class tkApp(tk.Tk):
         
         self.Lockin_Model = tk.StringVar(sWin)
         self.Lockin_Model.set(self.config["Instrument Settings"]["Lock-in Model"]) # default value
-        self.L_Model_Options = tk.OptionMenu(sWin, self.Lockin_Model, "LI 5640", "SR 830", "Testing")
+        self.L_Model_Options = tk.OptionMenu(sWin, self.Lockin_Model, "LI 5640", "SR 830", "Moku", "Testing")
         self.L_Model_Options.place(anchor="nw", x=160, y=28)
         
         self.SignalGen_Model = tk.StringVar(sWin)
         self.SignalGen_Model.set(self.config["Instrument Settings"]["Signal-Gen Model"]) # default value
-        self.SG_Model_Options = tk.OptionMenu(sWin, self.SignalGen_Model, "Keysight", "Agilent", "Testing")
+        self.SG_Model_Options = tk.OptionMenu(sWin, self.SignalGen_Model, "Keysight", "Agilent", "Moku", "Testing")
         self.SG_Model_Options.place(anchor="nw", x=160, y=68)
 
         # Save Folder
@@ -435,7 +436,6 @@ class tkApp(tk.Tk):
                         self.params[key] = int(self.entry_list[idx].get())
                     else:
                         self.params[key] = float(self.entry_list[idx].get())
-                    
                     if key == "Drive, V":
                         try:
                             self.gen.Set_Voltage(float(self.entry_list[idx].get()))
@@ -460,6 +460,11 @@ class tkApp(tk.Tk):
                 self.lockin = LOCKIN.LI5640("GPIB0::"+GPIB+"::INSTR")
             elif model == "SR 830":
                 self.lockin = LOCKIN.SR830("GPIB0::"+GPIB+"::INSTR")
+                try:
+                    self.gen = self.MokuLab.instrument_dict["Lock-in Amplifier"]
+                except:
+                    self.lockin = MokuLab("IP", GPIB).enable_lockin(2)
+                    self.gen = self.MokuLab["Lock-in Amplifier"]
             elif model == "Testing":
                 print("lock-in is in testing mode")
             else:
@@ -472,6 +477,12 @@ class tkApp(tk.Tk):
         try:
             if model == "Keysight" or model == "Agilent":
                 self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+GPIB+"::INSTR")
+            elif model == "Moku":
+                try:
+                    self.gen = self.MokuLab.instrument_dict["Waveform Generator"]
+                except:
+                    self.MokuLab("IP", GPIB).enable_signal_gen(1)
+                    self.gen = self.MokuLab["Waveform Generator"]
             elif model == "Testing":
                 print("signal-gen is in testing mode")
             else:
