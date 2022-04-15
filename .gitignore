@@ -6,6 +6,7 @@ venv
 data/*
 logging/*
 archive-data/*
+test_scripts
 .idea
 .spyproject
 machine_learning/models/*
