@@ -642,6 +642,7 @@ class tkApp(tk.Tk):
                         xflag = self.TFdata.fit_sweep()
                         if xflag in [1,2,3,4]:
                             self.update_temp_label()
+                            self.TF_data.update_recent_temp_file()
                             if self.trackBool.get():
                                 self.tracking()
                             if self.correctPhaseBool.get():
