@@ -108,6 +108,7 @@ class TFdata:
         try:
             np.savetxt(file_loc, np.array([self.fits[-1][0], self.fits[-1][3]]), delimiter='\t', header='Time, s\tTemperature, K')
         except:
+            pass
         
     def save_fits(self):
         if np.array(self.fits).ndim > 1:

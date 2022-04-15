@@ -12,7 +12,7 @@ import tkinter as tk
 
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
-from instruments import MokuLab
+from instruments.Liquid_Instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -190,7 +190,7 @@ class tkApp(tk.Tk):
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
         self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
-        self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         
         self.whichGraph_1 = tk.StringVar(self)
         self.whichGraph_1.set(self.graph_option_list[3]) # default value
@@ -460,6 +460,7 @@ class tkApp(tk.Tk):
                 self.lockin = LOCKIN.LI5640("GPIB0::"+GPIB+"::INSTR")
             elif model == "SR 830":
                 self.lockin = LOCKIN.SR830("GPIB0::"+GPIB+"::INSTR")
+            elif model == "Moku":
                 try:
                     self.gen = self.MokuLab.instrument_dict["Lock-in Amplifier"]
                 except:
@@ -653,7 +654,7 @@ class tkApp(tk.Tk):
                         xflag = self.TFdata.fit_sweep()
                         if xflag in [1,2,3,4]:
                             self.update_temp_label()
-                            self.TF_data.update_recent_temp_file()
+                            self.TFdata.update_recent_temp_file()
                             if self.trackBool.get():
                                 self.tracking()
                             if self.correctPhaseBool.get():
