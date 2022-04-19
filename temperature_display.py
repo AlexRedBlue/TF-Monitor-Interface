@@ -13,8 +13,16 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 
+from functions.info import ticks_to_hours
+
+from datetime import datetime
+from time import mktime
+
 import numpy as np
 import glob
+
+import warnings
+import traceback
 
 class tkApp(tk.Tk):
     def __init__(self):
@@ -73,10 +81,17 @@ class tkApp(tk.Tk):
                                 "height": self.win_zoom_size["y"]/self.standard_dpi}
         self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
                                "y": self.winfo_height()/standard_screen_size["y"]}
+    
+    def get_today(self):
+        now = datetime.now()
+        self.today = datetime(year=now.year, month=now.month, day=now.day)
+        self.timestamp_today = mktime(self.today.timetuple())
+        self.today = self.today.strftime("%Y-%m-%d")
+        # print(self.timestamp_today)
         
     def reset_data(self):
         self.temperature_fnames = glob.glob(r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\*.dat")
-
+        self.get_today()
         self.canvas.figure = Figure(figsize=(self.win_zoom_size["x"]/self.standard_dpi, 0.9*self.win_zoom_size["y"]/self.standard_dpi), dpi=self.standard_dpi)
         self.graph_dict = {}
         for idx, file in enumerate(self.temperature_fnames):
@@ -96,7 +111,9 @@ class tkApp(tk.Tk):
         new_data = False
         for idx, fname in enumerate(self.temperature_fnames):
             try:
-                time, temperature = np.loadtxt(fname)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    time, temperature = np.loadtxt(fname)
                 if time not in self.data[fname]["time"]:
                     self.data[fname]["time"].append(time)
                     self.data[fname]["temperature"].append(temperature)
@@ -105,18 +122,70 @@ class tkApp(tk.Tk):
                 pass
         return new_data
             
+    def create_label(self, T):
+        if T > 100:
+            power = 0
+            label = "{:.1f}".format(T*10**power)
+            units = " K"
+        elif T > 10:
+            power = 0
+            label = "{:.2f}".format(T*10**power)
+            units = " K"
+        elif T > 1:
+            power = 0
+            label = "{:.3f}".format(T*10**power)
+            units = " K"
+        elif T > 0.1:
+            power = 3
+            label = "{:.1f}".format(T*10**power)
+            units = " mK"
+        elif T > 0.01:
+            power = 3
+            label = "{:.2f}".format(T*10**power)
+            units = " mK"
+        elif T > 0.001:
+            power = 3
+            label = "{:.3f}".format(T*10**power)
+            units = " mK"
+        elif T > 0.0001:
+            power = 6
+            label = "{:.1f}".format(T*10**power)
+            units = " uK"
+        return label, units, power
             
-    def graph_data(self):
+    def graph_data(self): 
         for key in self.temperature_fnames:
             self.graph_dict[key].clear()
             try:
-                label = "{:.3f} K".format(self.data[key]["temperature"][-1])
+                label, units, power = self.create_label(self.data[key]["temperature"][-1])
             except:
-                label = ''
-            self.graph_dict[key].plot(self.data[key]["time"], self.data[key]["temperature"], label=label)
+                label, units, power = '', '', 0
+            # print(label, power, units)
+            self.graph_dict[key].plot(np.asarray(self.data[key]["time"])-self.timestamp_today, np.asarray(self.data[key]["temperature"])*(10**power), label=label+units)
             self.graph_dict[key].set_xlabel("time, s")
-            self.graph_dict[key].set_ylabel("T, K")
+            ylabel = key.split('\\')[-1][0:-4]
+            self.graph_dict[key].set_ylabel(ylabel+units)
             self.graph_dict[key].legend(loc=2)
+            try:
+                if time0 > self.data[key]["time"][0]:
+                    time0 = self.data[key]["time"][0]
+            except:
+                try:
+                    time0 = self.data[key]["time"][0]
+                except:
+                    pass
+            try:
+                if time1 < self.data[key]["time"][-1]:
+                    time1 = self.data[key]["time"][-1]
+            except:
+                try:
+                    time1 = self.data[key]["time"][-1]
+                except:
+                    pass
+        try:
+            ticks_to_hours(self.graph_dict[self.temperature_fnames[0]], time0-self.timestamp_today, time1-self.timestamp_today)
+        except:
+            pass
         self.canvas.draw()
                 
     def run(self):
@@ -138,6 +207,7 @@ class tkApp(tk.Tk):
                     update_time_left -= update_frequency
             except Exception as e:
                 print(e)
+                traceback.print_exc()
                 self.on = False
             
 
