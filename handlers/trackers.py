@@ -277,8 +277,8 @@ class diode_tracker:
         # Set up all the initial variables, arrays, and objects
         self.multimeter = multimeter
         print(self.multimeter.ID, " initialized.\n")
-        self.save_folder=r'data\diode_data' 
-        self.file_tag=r'\diode'
+        self.save_folder='diode_2022' 
+        self.file_tag='diode'
         self.last_save = time.time()
         self.saved_data = np.array([])
         self.data = []
@@ -288,7 +288,7 @@ class diode_tracker:
     def get_today(self):
         now = datetime.now()
         self.today = datetime(year=now.year, month=now.month, day=now.day)
-        self.timestamp_today = time.mktime(self.date.timetuple())
+        self.timestamp_today = time.mktime(self.today.timetuple())
         self.today = self.today.strftime("%Y-%m-%d")
     
     def update_temperature_file(self):
@@ -300,6 +300,10 @@ class diode_tracker:
         V = self.multimeter.Read_V()
         T = self.Diode_Fit_Vec(np.abs(V))
         self.data.append([time.time(), V, T])
+        try:
+            self.update_temperature_file()
+        except:
+            pass
         
     def getfilename(self, num=0):
         save_directory = "data/{}".format(self.save_folder)
@@ -311,11 +315,15 @@ class diode_tracker:
         return save_directory+fname
     
     def save_data(self):
-        file_name = self.getfilename()
-        np.savetxt(file_name, self.data, delimiter="\t",
-                   header="Time, s\tVoltage, V\t, Temperature, K")
-        self.saved_data = np.concatenate((self.saved_data, self.data))
-        self.data = []
+        if np.array(self.data).ndim > 1:
+            file_name = self.getfilename()
+            np.savetxt(file_name, self.data, delimiter="\t",
+                       header="Time, s\tVoltage, V\t, Temperature, K")
+            try: 
+                self.saved_data = np.concatenate((self.saved_data, self.data))
+            except:
+                self.saved_data = np.array(self.data)
+            self.data = []
 
     def save_fig(self, directory='data/diode/figures', num=0):
         if not os.path.exists(directory):
@@ -357,7 +365,8 @@ class mct_tracker:
         self.DVM = DVM
         self.Bridge = Bridge
         self.track_ratio = track_ratio
-        self.save_folder = "MCT"
+        self.last_save = time.time()
+        self.save_folder = "MCT_2022"
         self.file_tag = "MCT"
         self.data = []
         self.saved_data = np.array([])
@@ -369,7 +378,7 @@ class mct_tracker:
     def get_today(self):
         now = datetime.now()
         self.today = datetime(year=now.year, month=now.month, day=now.day)
-        self.timestamp_today = time.mktime(self.date.timetuple())
+        self.timestamp_today = time.mktime(self.today.timetuple())
         self.today = self.today.strftime("%Y-%m-%d")
         
     def getfilename(self, num=0):
@@ -382,11 +391,15 @@ class mct_tracker:
         return save_directory+fname
 
     def save_data(self):
-        file_name = self.getfilename()
-        np.savetxt(file_name, self.data, delimiter="\t",
-                   header="Time, s\tRatio\tVoltage, V\t, Temperature, K")
-        self.saved_data = np.concatenate((self.saved_data, self.data))
-        self.data = []
+        if np.array(self.data).ndim > 1:
+            file_name = self.getfilename()
+            np.savetxt(file_name, self.data, delimiter="\t",
+                       header="Time, s\tRatio\tVoltage, V\t, Temperature, K")
+            try: 
+                self.saved_data = np.concatenate((self.saved_data, self.data))
+            except:
+                self.saved_data = np.array(self.data)
+            self.data = []
 
     def update_temperature_file(self):
         np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\mct_temp.dat", X=self.data[-1], delimiter='\t', header="Time, s\tTemperature, K")
@@ -400,6 +413,10 @@ class mct_tracker:
             # COMMENT OUT THE NEXT LINE IF PID CONTROL DOES NOT WORK
             # OR SET track_ratio = False in mct_monitor_app
           self.PID_bridge_balance(V, Ratio) #commented out by Lucia 09/28/2021. PID control did work, but I wanted a smoother curve.
+        try:
+            self.update_temperature_file()
+        except:
+            pass
         
     def PID_bridge_balance(self, V, Ratio):
         dt = (self.data[-1][0] - self.data[-2][0])
