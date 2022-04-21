@@ -100,11 +100,11 @@ class tkApp(tk.Tk):
         
         self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
-        self.ay = self.fig.add_subplot(2,1,2)
+        self.ay = self.fig.add_subplot(2,1,2, sharex=self.ax)
         
         self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
-        self.ay2 = self.fig2.add_subplot(2,1,2)
+        self.ay2 = self.fig2.add_subplot(2,1,2, sharex=self.ax2)
         
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
         self.canvas.get_tk_widget().pack(in_=self.graph_1)
@@ -571,19 +571,19 @@ class tkApp(tk.Tk):
         self.ay2.clear()
         
         if self.TFdata.saved_fits.ndim > 1:
-            self.ax2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
-            self.ay2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
+            self.ax2.plot(self.TFdata.saved_fits[:, 0], self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(self.TFdata.saved_fits[:, 0], self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time0 = self.TFdata.saved_fits[0, 0]
             time1 = self.TFdata.saved_fits[-1,0]
         if np.asarray(self.TFdata.fits).ndim > 1:
-            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
-            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
+            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0], np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0], np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time1 = self.TFdata.fits[-1][0]
             if self.TFdata.saved_fits.ndim < 2:
                 time0 = self.TFdata.fits[0][0]
         
         if self.TFdata.saved_fits.ndim > 1 or np.asarray(self.TFdata.fits).ndim > 1: 
-            ticks_to_hours(self.ay2, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
+            ticks_to_hours(self.ay2, time0, time1)
           
         self.ax2.set_title("Fit Values")
         self.ax2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_1.get())])
@@ -714,6 +714,6 @@ if __name__ == "__main__":
         App = tkApp()        
         App.mainloop()
     else:
-        print("TFMI_App is in incorrect directory:" os.getcwd())
+        print("TFMI_App is in incorrect directory:", os.getcwd())
         print("TFMI_App is meant to run in TF-Monitor-Interface project")
     

@@ -161,7 +161,7 @@ class tkApp(tk.Tk):
             except:
                 label, units, power = '', '', 0
             # print(label, power, units)
-            self.graph_dict[key].plot(np.asarray(self.data[key]["time"])-self.timestamp_today, np.asarray(self.data[key]["temperature"])*(10**power), label=label+units)
+            self.graph_dict[key].plot(np.asarray(self.data[key]["time"]), np.asarray(self.data[key]["temperature"])*(10**power), label=label+units)
             self.graph_dict[key].set_xlabel("time, s")
             ylabel = key.split('\\')[-1][0:-4]
             self.graph_dict[key].set_ylabel(ylabel+units)
@@ -183,9 +183,10 @@ class tkApp(tk.Tk):
                 except:
                     pass
         try:
-            ticks_to_hours(self.graph_dict[self.temperature_fnames[0]], time0-self.timestamp_today, time1-self.timestamp_today)
+            ticks_to_hours(self.graph_dict[self.temperature_fnames[0]], time0, time1)
         except:
             pass
+        self.graph_dict[self.temperature_fnames[0]].set_title("Temperature Monitor")
         self.canvas.draw()
                 
     def run(self):
