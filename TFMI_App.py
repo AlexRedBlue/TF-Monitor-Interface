@@ -641,12 +641,23 @@ class tkApp(tk.Tk):
                 return False
         return True
     
-    def getfilename(self, fname, num=0):
-        if not os.exec(fname):
-            return fname
+    def savegraph(self, num=0):
+        fname = "data/{}/figures/{}_{}__{}".format(self.config["Monitor Save Settings"]["Save Folder"], 
+                                               self.config["Monitor Save Settings"]["Tuning Fork Name"], 
+                                               self.TFdata.today, num)
+        folders = fname.split("/")
+        # print(fname, "file exists:", os.path.exists(fname))
+        if not os.path.exists(fname):
+            # print(folders[0]+'/'+folders[1]+'/'+folders[2], "directory exists:", os.path.exists(folders[0]+'/'+folders[1]+'/'+folders[2]))
+            if os.path.exists(folders[0]+'/'+folders[1]+'/'+folders[2]):
+                self.fig2.savefig(fname, dpi=300)
+            elif os.path.exists(folders[0]+'/'+folders[1]):
+                os.mkdir(folders[0]+'/'+folders[1]+'/'+folders[2])
+                self.fig2.savefig(fname, dpi=300)
+            else:
+                print(folders[0]+'/'+folders[1], "save directory doesnt exist")
         else:
-            self.getfilename(fname[:-4]+"__{}".format(num)+fname[-4:], num=num+1)
-        
+            self.savegraph(num=num+1)
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
@@ -673,10 +684,7 @@ class tkApp(tk.Tk):
                             self.TFdata.reset_save_time()
                         if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
                             try:
-                                self.fig2.savefig(self.getfilename("data/{}/figures/{}_{}.png".format(self.config["Monitor Save Settings"]["Save Folder"], 
-                                                                                                self.config["Monitor Save Settings"]["Tuning Fork Name"], 
-                                                                                                self.TFdata.today)),
-                                            dpi=300)
+                                self.savegraph()
                             except:
                                 print("Unable to save figure")
                             self.TFdata.daily_save()
@@ -699,7 +707,10 @@ class tkApp(tk.Tk):
 
         
 if __name__ == "__main__":
-
-    App = tkApp()        
-    App.mainloop()
+    if os.getcwd().split("\\")[-1] == "TF-Monitor-Interface":
+        App = tkApp()        
+        App.mainloop()
+    else:
+        print("TFMI_App is in incorrect directory:" os.getcwd())
+        print("TFMI_App is meant to run in TF-Monitor-Interface project")
     
