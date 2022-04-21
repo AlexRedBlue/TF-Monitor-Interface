@@ -29,7 +29,7 @@ import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
 # TFdata Class
-from data_handlers.tuning_fork_data_handler import TFdata
+from handlers.tuning_fork import TFdata
 # Useful Functions
 from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
@@ -682,15 +682,16 @@ class tkApp(tk.Tk):
                                 self.phaseCorrection()
                         # if self.showGraph.get() == "Fit Details":
                         self.graph_fits()
-                        if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
-                            self.TFdata.save_fits()
-                            self.TFdata.reset_save_time()
                         if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
                             try:
                                 self.savegraph()
                             except:
                                 print("Unable to save figure")
                             self.TFdata.daily_save()
+                        elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+                            self.TFdata.save_fits()
+                            self.TFdata.reset_save_time()
+                        
                 
             except Exception as e:
                 print(e)
