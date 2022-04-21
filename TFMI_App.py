@@ -643,6 +643,13 @@ class tkApp(tk.Tk):
             else:
                 return False
         return True
+    
+    def getfilename(self, fname, num=0):
+        if not os.exec(fname):
+            return fname
+        else:
+            self.getfilename(fname[:-4]+"__{}".format(num)+fname[-4:], num=num+1)
+        
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
@@ -668,6 +675,13 @@ class tkApp(tk.Tk):
                             self.TFdata.save_fits()
                             self.TFdata.reset_save_time()
                         if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                            try:
+                                self.fig2.savefig(self.getfilename("data/{}/figures/{}_{}.png".format(self.config["Monitor Save Settings"]["Save Folder"], 
+                                                                                                self.config["Monitor Save Settings"]["Tuning Fork Name"], 
+                                                                                                self.TFdata.today)),
+                                            dpi=300)
+                            except:
+                                print("Unable to save figure")
                             self.TFdata.daily_save()
                 
             except Exception as e:
