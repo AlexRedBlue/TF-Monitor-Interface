@@ -12,6 +12,7 @@ import tkinter as tk
 
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
+from instruments import SignalGenerators
 from instruments.Liquid_Instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
@@ -28,7 +29,7 @@ import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
 # TFdata Class
-from tuning_fork.tuning_fork_data_handler import TFdata
+from data_handlers.tuning_fork_data_handler import TFdata
 # Useful Functions
 from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
@@ -97,11 +98,11 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
         self.ay = self.fig.add_subplot(2,1,2)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
         self.ay2 = self.fig2.add_subplot(2,1,2)
         
@@ -268,19 +269,19 @@ class tkApp(tk.Tk):
             
     def init_window_size(self):
         self.update_idletasks()
-        self.standard_dpi = 96 # 1080p monitors
-        standard_screen_size = {"x":1920, "y":1080}
+        self.default_dpi = 96 # 1080p monitors
+        default_screen_size = {"width":20, "height":11.25}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
-        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.standard_dpi, 
-                                    "height": self.winfo_screenheight()/self.standard_dpi}
+        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.default_dpi, 
+                                    "height": self.winfo_screenheight()/self.default_dpi}
         
         self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
         
-        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.standard_dpi, 
-                                "height": self.win_zoom_size["y"]/self.standard_dpi}
-        self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
-                               "y": self.winfo_height()/standard_screen_size["y"]}
+        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.default_dpi, 
+                                "height": self.win_zoom_size["y"]/self.default_dpi}
+        self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
+                               "y": self.screen_size_inches["height"]/default_screen_size["height"]}
         
     
     def settingsWindow(self):
@@ -468,6 +469,7 @@ class tkApp(tk.Tk):
                     self.gen = self.MokuLab["Lock-in Amplifier"]
             elif model == "Testing":
                 print("lock-in is in testing mode")
+                self.lockin = LOCKIN.test_lockin("GPIB0::"+GPIB+"::INSTR")
             else:
                 print("Invalid Lock-in Instrument Type: Reset Config File")
             return True
@@ -486,6 +488,7 @@ class tkApp(tk.Tk):
                     self.gen = self.MokuLab["Waveform Generator"]
             elif model == "Testing":
                 print("signal-gen is in testing mode")
+                self.gen = SignalGenerators.test_gen("GPIB0::"+GPIB+"::INSTR")
             else:
                 print("Invalid Signal-Gen Instrument Type: Reset Config File")
             return True

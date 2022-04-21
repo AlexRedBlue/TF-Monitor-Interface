@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jan 25 09:19:00 2021
+Created on Sat Apr 16 00:52:00 2022
 
-@author: Andrew
+@author: alexd
 """
-
 
 import pyvisa
 
@@ -40,3 +39,15 @@ class AGILENT_SIGNAL_GEN():
     def Set_Frequency(self,freq):
         command_str = "SOUR1:FREQ {:.4f} HZ".format(freq)
         self.instr.write(command_str)
+
+class test_gen:
+    def __init__(self, GPIB):
+        self.ID = "Tester Signal Gen"
+        self.Voltage = 1
+        self.frequency = 1
+        
+    def Set_Voltage(self,voltage):
+        self.Voltage = voltage
+        
+    def Set_Frequency(self,freq):
+        self.frequency = freq
