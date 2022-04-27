@@ -12,7 +12,7 @@ import tkinter as tk
 
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
-from instruments import MokuLab
+from instruments.Liquid_Instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -119,7 +119,7 @@ class tkApp(tk.Tk):
         self.toolbar2 = NavigationToolbar2Tk(self.canvas2, self.graph_2)
         self.toolbar2.update()
         self.canvas2.get_tk_widget().pack(in_=self.graph_2)
-        self.canvas2.mpl_connect("key_press_event", self.on_key_press)
+        self.canvas2.mpl_connect("key_press_event", self.on_key_press2)
 
         self.param_entry_frame = tk.Frame(self)
         self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
@@ -190,7 +190,7 @@ class tkApp(tk.Tk):
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
         self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
-        self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         
         self.whichGraph_1 = tk.StringVar(self)
         self.whichGraph_1.set(self.graph_option_list[3]) # default value
@@ -493,7 +493,11 @@ class tkApp(tk.Tk):
 
     def on_key_press(self, event):
         print("you pressed {}".format(event.key))
-        key_press_handler(event, self.canvas, self.toolbar)
+        key_press_handler(event, self.canvas, self.toolbar1)
+    
+    def on_key_press2(self, event):
+        print("you pressed {}".format(event.key))
+        key_press_handler(event, self.canvas2, self.toolbar2)
         
         
     def update_tracking_range(self):
