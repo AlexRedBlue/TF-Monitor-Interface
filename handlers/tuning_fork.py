@@ -102,6 +102,13 @@ class TFdata:
         if os.path.isfile(fname):
             return self.getfilename(directory, file_tag, num+1)
         return fname
+    
+    def update_recent_temp_file(self):
+        file_loc = r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\TF_Temperature.dat"
+        try:
+            np.savetxt(file_loc, np.array([self.fits[-1][0], self.fits[-1][3]]), delimiter='\t', header='Time, s\tTemperature, K')
+        except:
+            pass
         
     def save_fits(self):
         if np.array(self.fits).ndim > 1:

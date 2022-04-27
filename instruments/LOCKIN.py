@@ -447,3 +447,25 @@ class LI5640:
         Vx = float(data_str[0])
         Vy = float(data_str[1])
         return Vx, Vy
+  
+import numpy as np
+
+class test_lockin:
+    def __init__(self, GPIB_ADDR):
+        self.ID = "Test Lock-in"
+        self.phase = 0
+        self.sensitivity = 1
+        self.cycle = 0
+    
+    def Read_XY(self):
+        Vx = self.cycle*np.cos(self.phase)
+        Vy = self.cycle*np.sin(self.phase)
+        if self.cycle < 10:
+            self.cycle += 1
+        else:
+            self.cycle = 0
+        return Vx, Vy
+    
+    def Set_Phase(self,phase_deg):
+        self.phase = phase_deg
+    

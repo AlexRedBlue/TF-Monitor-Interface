@@ -25,7 +25,10 @@ def Diode_Fit(Z):
     x=((Z-A[len(A)-2])-(A[len(A)-1]-Z))/(A[len(A)-1]-A[len(A)-2])
     T=0
     for i in range(len(A)-2):
-        T=T+A[i]*np.cos(i*np.arccos(x))
+        try:
+            T=T+A[i]*np.cos(i*np.arccos(x))
+        except:
+            return np.NAN
     return T
     
 if __name__ == "__main__":

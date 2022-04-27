@@ -12,6 +12,7 @@ import tkinter as tk
 
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
+from instruments import SignalGenerators
 from instruments.Liquid_Instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
@@ -28,7 +29,7 @@ import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
 # TFdata Class
-from tuning_fork.tuning_fork_data_handler import TFdata
+from handlers.tuning_fork import TFdata
 # Useful Functions
 from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
@@ -97,13 +98,13 @@ class tkApp(tk.Tk):
         self.graph_2 = tk.Frame(self)
         self.graph_2.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding),y="0i")
         
-        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
+        self.fig = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax = self.fig.add_subplot(2,1,1)
-        self.ay = self.fig.add_subplot(2,1,2)
+        self.ay = self.fig.add_subplot(2,1,2, sharex=self.ax)
         
-        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.standard_dpi)
+        self.fig2 = Figure(figsize=(graph_size*self.win_zoom_inches["width"]/2, graph_size*self.win_zoom_inches["width"]/2*graph_ratio), dpi=self.default_dpi)
         self.ax2 = self.fig2.add_subplot(2,1,1)
-        self.ay2 = self.fig2.add_subplot(2,1,2)
+        self.ay2 = self.fig2.add_subplot(2,1,2, sharex=self.ax2)
         
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
         self.canvas.get_tk_widget().pack(in_=self.graph_1)
@@ -119,7 +120,7 @@ class tkApp(tk.Tk):
         self.toolbar2 = NavigationToolbar2Tk(self.canvas2, self.graph_2)
         self.toolbar2.update()
         self.canvas2.get_tk_widget().pack(in_=self.graph_2)
-        self.canvas2.mpl_connect("key_press_event", self.on_key_press2)
+        self.canvas2.mpl_connect("key_press_event", self.on_key_press)
 
         self.param_entry_frame = tk.Frame(self)
         self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
@@ -268,19 +269,19 @@ class tkApp(tk.Tk):
             
     def init_window_size(self):
         self.update_idletasks()
-        self.standard_dpi = 96 # 1080p monitors
-        standard_screen_size = {"x":1920, "y":1080}
+        self.default_dpi = 96 # 1080p monitors
+        default_screen_size = {"width":20, "height":11.25}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
-        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.standard_dpi, 
-                                    "height": self.winfo_screenheight()/self.standard_dpi}
+        self.screen_size_inches = {"width": self.winfo_screenwidth()/self.default_dpi, 
+                                    "height": self.winfo_screenheight()/self.default_dpi}
         
         self.win_zoom_size = {"x":self.winfo_width(), "y":self.winfo_height()}
         
-        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.standard_dpi, 
-                                "height": self.win_zoom_size["y"]/self.standard_dpi}
-        self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
-                               "y": self.winfo_height()/standard_screen_size["y"]}
+        self.win_zoom_inches = {"width": self.win_zoom_size["x"]/self.default_dpi, 
+                                "height": self.win_zoom_size["y"]/self.default_dpi}
+        self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
+                               "y": self.screen_size_inches["height"]/default_screen_size["height"]}
         
     
     def settingsWindow(self):
@@ -460,6 +461,7 @@ class tkApp(tk.Tk):
                 self.lockin = LOCKIN.LI5640("GPIB0::"+GPIB+"::INSTR")
             elif model == "SR 830":
                 self.lockin = LOCKIN.SR830("GPIB0::"+GPIB+"::INSTR")
+            elif model == "Moku":
                 try:
                     self.gen = self.MokuLab.instrument_dict["Lock-in Amplifier"]
                 except:
@@ -467,6 +469,7 @@ class tkApp(tk.Tk):
                     self.gen = self.MokuLab["Lock-in Amplifier"]
             elif model == "Testing":
                 print("lock-in is in testing mode")
+                self.lockin = LOCKIN.test_lockin("GPIB0::"+GPIB+"::INSTR")
             else:
                 print("Invalid Lock-in Instrument Type: Reset Config File")
             return True
@@ -485,6 +488,7 @@ class tkApp(tk.Tk):
                     self.gen = self.MokuLab["Waveform Generator"]
             elif model == "Testing":
                 print("signal-gen is in testing mode")
+                self.gen = SignalGenerators.test_gen("GPIB0::"+GPIB+"::INSTR")
             else:
                 print("Invalid Signal-Gen Instrument Type: Reset Config File")
             return True
@@ -493,11 +497,7 @@ class tkApp(tk.Tk):
 
     def on_key_press(self, event):
         print("you pressed {}".format(event.key))
-        key_press_handler(event, self.canvas, self.toolbar1)
-    
-    def on_key_press2(self, event):
-        print("you pressed {}".format(event.key))
-        key_press_handler(event, self.canvas2, self.toolbar2)
+        key_press_handler(event, self.canvas, self.toolbar)
         
         
     def update_tracking_range(self):
@@ -571,19 +571,19 @@ class tkApp(tk.Tk):
         self.ay2.clear()
         
         if self.TFdata.saved_fits.ndim > 1:
-            self.ax2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
-            self.ay2.plot(self.TFdata.saved_fits[:, 0]-self.TFdata.timestamp_today, self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
+            self.ax2.plot(self.TFdata.saved_fits[:, 0], self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(self.TFdata.saved_fits[:, 0], self.TFdata.saved_fits[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time0 = self.TFdata.saved_fits[0, 0]
             time1 = self.TFdata.saved_fits[-1,0]
         if np.asarray(self.TFdata.fits).ndim > 1:
-            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
-            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0]-self.TFdata.timestamp_today, np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
+            self.ax2.plot(np.asarray(self.TFdata.fits)[:, 0], np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_1.get())])
+            self.ay2.plot(np.asarray(self.TFdata.fits)[:, 0], np.asarray(self.TFdata.fits)[:, 3+self.graph_option_list.index(self.whichGraph_2.get())])
             time1 = self.TFdata.fits[-1][0]
             if self.TFdata.saved_fits.ndim < 2:
                 time0 = self.TFdata.fits[0][0]
         
         if self.TFdata.saved_fits.ndim > 1 or np.asarray(self.TFdata.fits).ndim > 1: 
-            ticks_to_hours(self.ay2, (time0-self.TFdata.timestamp_today), (time1-self.TFdata.timestamp_today))
+            ticks_to_hours(self.ay2, time0, time1)
           
         self.ax2.set_title("Fit Values")
         self.ax2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_1.get())])
@@ -643,6 +643,24 @@ class tkApp(tk.Tk):
             else:
                 return False
         return True
+    
+    def savegraph(self, num=0):
+        fname = "data/{}/figures/{}_{}__{}".format(self.config["Monitor Save Settings"]["Save Folder"], 
+                                               self.config["Monitor Save Settings"]["Tuning Fork Name"], 
+                                               self.TFdata.today, num)
+        folders = fname.split("/")
+        # print(fname, "file exists:", os.path.exists(fname))
+        if not os.path.exists(fname):
+            # print(folders[0]+'/'+folders[1]+'/'+folders[2], "directory exists:", os.path.exists(folders[0]+'/'+folders[1]+'/'+folders[2]))
+            if os.path.exists(folders[0]+'/'+folders[1]+'/'+folders[2]):
+                self.fig2.savefig(fname, dpi=300)
+            elif os.path.exists(folders[0]+'/'+folders[1]):
+                os.mkdir(folders[0]+'/'+folders[1]+'/'+folders[2])
+                self.fig2.savefig(fname, dpi=300)
+            else:
+                print(folders[0]+'/'+folders[1], "save directory doesnt exist")
+        else:
+            self.savegraph(num=num+1)
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
@@ -657,17 +675,23 @@ class tkApp(tk.Tk):
                         xflag = self.TFdata.fit_sweep()
                         if xflag in [1,2,3,4]:
                             self.update_temp_label()
+                            self.TFdata.update_recent_temp_file()
                             if self.trackBool.get():
                                 self.tracking()
                             if self.correctPhaseBool.get():
                                 self.phaseCorrection()
                         # if self.showGraph.get() == "Fit Details":
                         self.graph_fits()
-                        if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+                        if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                            try:
+                                self.savegraph()
+                            except:
+                                print("Unable to save figure")
+                            self.TFdata.daily_save()
+                        elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                             self.TFdata.save_fits()
                             self.TFdata.reset_save_time()
-                        if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
-                            self.TFdata.daily_save()
+                        
                 
             except Exception as e:
                 print(e)
@@ -687,7 +711,10 @@ class tkApp(tk.Tk):
 
         
 if __name__ == "__main__":
-
-    App = tkApp()        
-    App.mainloop()
+    if os.getcwd().split("\\")[-1] == "TF-Monitor-Interface":
+        App = tkApp()        
+        App.mainloop()
+    else:
+        print("TFMI_App is in incorrect directory:", os.getcwd())
+        print("TFMI_App is meant to run in TF-Monitor-Interface project")
     
