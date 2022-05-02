@@ -48,10 +48,13 @@ class tkApp(tk.Tk):
         self.reset_data()
 
         self.reset_button = tk.Button(self, text='reset', bg='red', fg='white', command=self.reset_data)
-        self.reset_button.place(x=int(self.win_zoom_size["x"]/2), y=self.win_zoom_size["y"]-40)
+        self.reset_button.place(x=int(self.win_zoom_size["x"] - 50), y=self.win_zoom_size["y"]-40)
         
         self.canvas.mpl_connect("key_press_event", self.on_key_press)
                 
+        self.start_button = tk.Button(master=self, text="Run", bg='green', fg='white', height=2, width=9, command=self.run)
+        self.start_button.place(x=int(self.win_zoom_size["x"]/2), y=self.win_zoom_size["y"]-40)
+        
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def on_closing(self):
@@ -191,6 +194,7 @@ class tkApp(tk.Tk):
                 
     def run(self):
         self.on = True
+        self.start_button.config(text="Pause", bg="red", fg="white", command=self.pause)
         while self.on:
             try:
                 new_data = self.read_data()
@@ -206,10 +210,16 @@ class tkApp(tk.Tk):
                     else:
                         self.after(update_time_left, self.update())
                     update_time_left -= update_frequency
-            except Exception as e:
-                print(e)
+            except Exception:
                 traceback.print_exc()
-                self.on = False
+                if self.on:
+                    self.on = False
+
+                
+    def pause(self):
+        self.on = False
+        self.start_button.config(text="Run", bg="green", fg="white", command=self.run)
+        
             
 
     
