@@ -118,8 +118,12 @@ class MokuSignalGenerator:
         
 if __name__ == "__main__":
     
-    test_moku = MokuLab("IP", "192.168.1.1")
-    print(test_moku.get_serial())
+    # m = Moku.get_by_ip("192.168.73.1")
+    m = Moku.get_by_ip("192.168.1.167")
+    # m = Moku.get_by_name("Moku")
+    print(m.get_serial())
+    # test_moku = MokuLab("name", "Moku")
+    # print(test_moku.get_serial())
         
     
     
