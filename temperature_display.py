@@ -32,7 +32,7 @@ class tkApp(tk.Tk):
         self.state("zoomed")
         self.init_window_size()
         self.state("normal")
-        self.geometry("{}x{}".format(int(self.screen_size["x"]/1.5), int(self.screen_size["y"]/1.5)))
+        self.geometry("{}x{}".format(int(self.screen_size["x"]/1.5), int(self.screen_size["y"]/1.2)))
         self.init_window_size()
 
         

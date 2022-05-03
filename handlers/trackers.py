@@ -212,11 +212,14 @@ class lakeshore_tracker:
         self.data.append(R_values)
         self.update_temperature_file()
         
-    def getfilename(self, directory, file_tag):
-        if os.path.isfile(directory+file_tag + '_{:s}_{:d}.dat'.format(self.date.strftime("%Y-%m-%d"), self.save_num)):
-            self.save_num += 1
-            return self.getfilename(directory, file_tag)
-        return '/'+file_tag + '_{:s}_{:d}.dat'.format(self.date.strftime("%Y-%m-%d"), self.save_num)
+    def getfilename(self, num=0):
+        save_directory = "data/{}".format(self.save_folder)
+        fname = "/{}_{}__{}.dat".format(self.file_tag, self.today, num)
+        if not os.path.isdir(save_directory):
+            os.makedirs(save_directory)
+        if os.path.isfile(save_directory+fname):
+            return self.getfilename(num+1)
+        return save_directory+fname
 
     def save_data(self):
         if np.array(self.data).ndim > 1:
@@ -229,8 +232,8 @@ class lakeshore_tracker:
             if not os.path.exists(directory):
                 os.makedirs(directory)
             # file_name = filetag_YearMonthDay_#.dat
-            file_name = self.getfilename(directory, self.file_tag)
-            np.savetxt(directory+file_name, self.data, header=header,
+            file_name = self.getfilename()
+            np.savetxt(file_name, self.data, header=header,
                        delimiter="\t")
             try: 
                 self.saved_data = np.concatenate((self.saved_data, self.data))
@@ -238,14 +241,14 @@ class lakeshore_tracker:
                 self.saved_data = np.array(self.data)
             self.data = []
 
-    def save_fig(self, directory=r'archive_data\data\figures', num=0):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        fname = directory + "\\{}_rt_{}.png".format(self.date.strftime("%Y-%m-%d"), num)
-        if os.path.isfile(fname) == False:
-            self.fig.savefig(fname)
-        else:
-            return self.save_fig(directory, num+1)
+    # def save_fig(self, directory=r'archive_data\data\figures', num=0):
+    #     if not os.path.exists(directory):
+    #         os.makedirs(directory)
+    #     fname = directory + "\\{}_rt_{}.png".format(self.date.strftime("%Y-%m-%d"), num)
+    #     if os.path.isfile(fname) == False:
+    #         self.fig.savefig(fname)
+    #     else:
+    #         return self.save_fig(directory, num+1)
 
     def initialize_graphs(self):
         plt.ion()
@@ -321,7 +324,10 @@ class diode_tracker:
         # TODO
         # Read data from multimeter
         V = self.multimeter.Read_V()
-        T = self.Diode_Fit_Vec(np.abs(V))
+        try:
+            T = self.Diode_Fit_Vec(np.abs(V))
+        except:
+            T = np.nan
         self.data.append([time.time(), V, T])
         try:
             self.update_temperature_file()

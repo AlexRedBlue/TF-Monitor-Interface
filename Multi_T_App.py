@@ -54,9 +54,8 @@ class mainwindow_tkApp(tk.Tk):
         self.R8_tracker = lakeshore_tracker(lakeshore=LAKESHORE.LS370("GPIB0::6::INSTR"),
                                             channel_list=[1])
         
-        self.diode_thread = Thread(target=self.start_diode)
-        self.mct_thread = Thread(target=self.start_mct)
-        self.R8_thread = Thread(target=self.start_R8)
+        
+        
         
         # if not os.path.exists('TFMI_Config.cfg'):
         #     self.initConfig()
@@ -128,8 +127,11 @@ class mainwindow_tkApp(tk.Tk):
                                 "height": self.win_zoom_size["y"]/self.standard_dpi}
         self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
                                "y": self.winfo_height()/standard_screen_size["y"]}
+    
     def start_diode_thread(self):
+        self.diode_thread = Thread(target=self.start_diode)
         self.diode_thread.start()
+        
         
     def start_diode(self):
         self.diode_start_button.config(text="Stop Diode", bg="red", fg="white", command=self.stop_diode_thread)
@@ -180,6 +182,7 @@ class mainwindow_tkApp(tk.Tk):
         self.diode_label.config(text='')
         
     def start_mct_thread(self):
+        self.mct_thread = Thread(target=self.start_mct)
         self.mct_thread.start()
     
     def start_mct(self):
@@ -228,6 +231,7 @@ class mainwindow_tkApp(tk.Tk):
         self.mct_label.config(text='')
         
     def start_R8_thread(self):
+        self.R8_thread = Thread(target=self.start_R8)
         self.R8_thread.start()
     
     def start_R8(self):
@@ -239,8 +243,8 @@ class mainwindow_tkApp(tk.Tk):
         while self.run_R8:
             try:
                 self.R8_tracker.take_data()
-                update_time_left = 1000
-                update_frequency = 100
+                update_time_left = 6*1000
+                update_frequency = 250
                 while update_time_left > 0:
                     if update_time_left > update_frequency:
                         self.after(update_frequency, self.update())
