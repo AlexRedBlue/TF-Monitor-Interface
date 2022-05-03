@@ -12,6 +12,7 @@ import tkinter as tk
 # from instruments import SignalGenerators
 from instruments import AGILENT_MULTIMETER
 from instruments import CAPACITANCE_BRIDGE
+from instruments import LAKESHORE
 
 # from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 # Implement the default Matplotlib key bindings.
@@ -25,7 +26,7 @@ import time
 
 import numpy as np
 
-from handlers.trackers import diode_tracker, mct_tracker
+from handlers.trackers import diode_tracker, mct_tracker, lakeshore_tracker
 
 from threading import Thread
 
@@ -39,7 +40,7 @@ class mainwindow_tkApp(tk.Tk):
         self.state("zoomed")
         self.init_window_size()
         self.state("normal")
-        self.geometry("{}x{}".format(int(self.screen_size["x"]/1.5), int(self.screen_size["y"]/1.5)))
+        self.geometry("{}x{}".format(int(self.screen_size["x"]/3), int(self.screen_size["y"]/3)))
         self.init_window_size()
        
         self.config = configparser.RawConfigParser()
@@ -50,8 +51,12 @@ class mainwindow_tkApp(tk.Tk):
                                        track_ratio=True,
                                        P=5E-5, I=300, D=60)
         
+        self.R8_tracker = lakeshore_tracker(lakeshore=LAKESHORE.LS370("GPIB0::6::INSTR"),
+                                            channel_list=[1])
+        
         self.diode_thread = Thread(target=self.start_diode)
         self.mct_thread = Thread(target=self.start_mct)
+        self.R8_thread = Thread(target=self.start_R8)
         
         # if not os.path.exists('TFMI_Config.cfg'):
         #     self.initConfig()
@@ -69,6 +74,12 @@ class mainwindow_tkApp(tk.Tk):
         self.mct_label = tk.Label(master=self, text="")
         self.mct_label.place(x="{}i".format((self.win_zoom_inches["width"]/2+0.4)), y="{}i".format(self.win_zoom_inches["height"]*3/6))
         
+        self.R8_start_button = tk.Button(master=self, text="Start R8", bg='green', fg='white', height=2, width=9, command=self.start_R8_thread)
+        self.R8_start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(self.win_zoom_inches["height"]*5/6))
+        
+        self.R8_label = tk.Label(master=self, text="")
+        self.R8_label.place(x="{}i".format((self.win_zoom_inches["width"]/2+0.4)), y="{}i".format(self.win_zoom_inches["height"]*5/6))
+        
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -78,6 +89,7 @@ class mainwindow_tkApp(tk.Tk):
         if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.run_diode = False
             self.run_mct = False
+            self.run_R8 = False
             try:
                 self.quit()
                 self.destroy()
@@ -93,6 +105,11 @@ class mainwindow_tkApp(tk.Tk):
             except:
                 traceback.print_exc()
                 print("MCT data not saved")
+            try:
+                self.R8_tracker.save_data()
+            except:
+                traceback.print_exc()
+                print("R8 data not saved")
             
             
         
@@ -160,6 +177,7 @@ class mainwindow_tkApp(tk.Tk):
     def stop_diode_thread(self):
         self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
         self.run_diode = False
+        self.diode_label.config(text='')
         
     def start_mct_thread(self):
         self.mct_thread.start()
@@ -207,6 +225,55 @@ class mainwindow_tkApp(tk.Tk):
     def stop_mct_thread(self):
         self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
         self.run_mct = False
+        self.mct_label.config(text='')
+        
+    def start_R8_thread(self):
+        self.R8_thread.start()
+    
+    def start_R8(self):
+        self.R8_start_button.config(text="Stop R8", bg="red", fg="white", command=self.stop_R8_thread)
+        cycle = 0
+        # Main Loop
+        self.run_R8 = True
+        
+        while self.run_R8:
+            try:
+                self.R8_tracker.take_data()
+                update_time_left = 1000
+                update_frequency = 100
+                while update_time_left > 0:
+                    if update_time_left > update_frequency:
+                        self.after(update_frequency, self.update())
+                    else:
+                        self.after(update_time_left, self.update())
+                    update_time_left -= update_frequency
+                    if update_time_left % 3 == 0:
+                        if cycle < 3:
+                            cycle += 1
+                        else:
+                            cycle = 0
+                        self.R8_label.config(text=self.run_cycle[cycle])
+                if time.time() - self.R8_tracker.timestamp_today > 24*60*60:
+                    self.R8_tracker.save_data()
+                    self.R8_tracker.saved_data = np.array([])
+                    self.R8_tracker.get_today()
+                elif time.time() - self.R8_tracker.last_save > 60*60:
+                    self.R8_tracker.save_data()   
+            except Exception as e:
+                print(e)
+                if self.run_R8:
+                    self.R8_tracker.save_data()
+                    self.run_R8 = False
+                    try:
+                        self.quit()
+                        self.destroy()
+                    except Exception as e:
+                        print(e)
+    
+    def stop_R8_thread(self):
+        self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
+        self.run_R8 = False
+        self.R8_label.config(text='')
         
 if __name__ == "__main__":
     App = mainwindow_tkApp()
