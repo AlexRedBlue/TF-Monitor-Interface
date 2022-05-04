@@ -47,7 +47,7 @@ class tkApp(tk.Tk):
         self.canvas.get_tk_widget().pack(in_=self.graph_1)
         self.canvas.mpl_connect("key_press_event", self.on_key_press)
         
-        self.line_styles = ["-", 'o', ',']
+        self.line_styles = ["-", 'o', '.', ',']
         self.graph_line_style = tk.StringVar(self)
         self.graph_line_style.set(self.line_styles[0])
         self.line_option = tk.OptionMenu(self, self.graph_line_style, *self.line_styles)

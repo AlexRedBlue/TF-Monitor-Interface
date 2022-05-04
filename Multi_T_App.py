@@ -170,8 +170,7 @@ class mainwindow_tkApp(tk.Tk):
                     self.diode_tracker.save_data()
                     self.run_diode = False
                     try:
-                        self.quit()
-                        self.destroy()
+                        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
                     except Exception as e:
                         print(e)
     
@@ -220,8 +219,7 @@ class mainwindow_tkApp(tk.Tk):
                     self.mct_tracker.save_data()
                     self.run_mct = False
                     try:
-                        self.quit()
-                        self.destroy()
+                        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
                     except Exception as e:
                         print(e)
     
@@ -269,8 +267,7 @@ class mainwindow_tkApp(tk.Tk):
                     self.R8_tracker.save_data()
                     self.run_R8 = False
                     try:
-                        self.quit()
-                        self.destroy()
+                        self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
                     except Exception as e:
                         print(e)
     

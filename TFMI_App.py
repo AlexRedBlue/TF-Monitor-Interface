@@ -47,6 +47,9 @@ class tkApp(tk.Tk):
         self.config_directory = "configs/"
         self.config_name = 'TFMI_Config.cfg'
         
+        self.config_label = tk.Label(self, text=self.config_name)
+        self.config_label.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(1*self.scaling_factor["y"]))
+        
         if not os.path.exists(self.config_directory+self.config_name):
             self.initConfig()
             
@@ -272,7 +275,7 @@ class tkApp(tk.Tk):
     #call this when you want to update a value in configuation file
     # with some changes you can save many values in many sections
         self.config.set(section, key, value)
-        with open('TFMI_Config.cfg', 'w') as output:
+        with open(self.config_directory+self.config_name, 'w') as output:
             self.config.write(output)
             
     def update_checkbox_config(self):
@@ -446,16 +449,6 @@ class tkApp(tk.Tk):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
             self.TFdata.set_current_amp(float(self.current_amp_entry.get()))
             
-        if isStrFloat(self.drive_entry.get()):
-            try:
-                self.gen.Set_Voltage(float(self.drive_entry.get()))
-                self.TFdata.set_drive(float(self.drive_entry.get()))
-                self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
-                self.label_list[5].config(text="Drive, V: "+self.drive_entry.get())
-            except:
-                self.Drive_Label.delete(0, 'end')
-                self.Drive_Label.insert(0, self.config["Frequency Sweep Settings"]["Drive"])
-                print("Drive Not Set")
                 
     def change_config(self):
         new_config_file = tk.filedialog.askopenfilename(initialdir=self.config_directory)
@@ -464,6 +457,7 @@ class tkApp(tk.Tk):
         self.config.read(self.config_directory+self.config_name)
         self.load_config()
         self.load_settings_text()
+        self.config_label.config(text=self.config_name)
                 
     def update_sweep_params(self):
         old_params = self.params
