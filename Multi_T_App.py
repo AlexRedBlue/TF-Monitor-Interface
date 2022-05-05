@@ -86,6 +86,7 @@ class mainwindow_tkApp(tk.Tk):
         self.update_idletasks()
         self.update()
         if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.on = False
             self.run_diode = False
             self.run_mct = False
             self.run_R8 = False
@@ -318,8 +319,8 @@ class mainwindow_tkApp(tk.Tk):
         self.run_R8 = False
         self.run_mct = False
         self.run_diode = False
-        on=True
-        while on:
+        self.on=True
+        while self.on:
             try:
                 if self.run_R8:
                     self.R8_tracker.take_data()
@@ -368,8 +369,9 @@ class mainwindow_tkApp(tk.Tk):
                     self.diode_tracker.save_data()
                     
             except Exception:
-                traceback.print_exc()
-                on = False
+                if self.on:
+                    self.on = False
+                    traceback.print_exc()
                 if self.run_R8:
                     self.R8_tracker.save_data()
                     self.run_R8 = False
