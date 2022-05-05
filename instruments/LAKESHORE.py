@@ -36,7 +36,7 @@ class LS370:
         measurements = []
         for idx, channel in enumerate(channels):
             self.inst.write("SCAN {:d},0".format(channel))
-            plt.pause(wait_time)
+            # plt.pause(wait_time)
             measurements.append([channel, self.Read_R(channel)])
         return measurements
         

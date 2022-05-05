@@ -61,19 +61,19 @@ class mainwindow_tkApp(tk.Tk):
         #     self.initConfig()
         self.run_cycle = ["|", "/", "-", "\\"]
         
-        self.diode_start_button = tk.Button(master=self, text="Start Diode", bg='green', fg='white', height=2, width=9, command=self.start_diode_thread)
+        self.diode_start_button = tk.Button(master=self, text="Start Diode", bg='green', fg='white', height=2, width=9, command=self.start_diode)
         self.diode_start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(self.win_zoom_inches["height"]*1/6))
         
         self.diode_label = tk.Label(master=self, text="")
         self.diode_label.place(x="{}i".format((self.win_zoom_inches["width"]/2+0.4)), y="{}i".format(self.win_zoom_inches["height"]*1/6))
         
-        self.mct_start_button = tk.Button(master=self, text="Start MCT", bg='green', fg='white', height=2, width=9, command=self.start_mct_thread)
+        self.mct_start_button = tk.Button(master=self, text="Start MCT", bg='green', fg='white', height=2, width=9, command=self.start_mct)
         self.mct_start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(self.win_zoom_inches["height"]*3/6))
         
         self.mct_label = tk.Label(master=self, text="")
         self.mct_label.place(x="{}i".format((self.win_zoom_inches["width"]/2+0.4)), y="{}i".format(self.win_zoom_inches["height"]*3/6))
         
-        self.R8_start_button = tk.Button(master=self, text="Start R8", bg='green', fg='white', height=2, width=9, command=self.start_R8_thread)
+        self.R8_start_button = tk.Button(master=self, text="Start R8", bg='green', fg='white', height=2, width=9, command=self.start_R8)
         self.R8_start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(self.win_zoom_inches["height"]*5/6))
         
         self.R8_label = tk.Label(master=self, text="")
@@ -128,120 +128,207 @@ class mainwindow_tkApp(tk.Tk):
         self.scaling_factor = {"x": self.winfo_width()/standard_screen_size["x"],
                                "y": self.winfo_height()/standard_screen_size["y"]}
     
-    def start_diode_thread(self):
-        self.diode_thread = Thread(target=self.start_diode)
-        self.diode_thread.start()
+    # def start_diode_thread(self):
+    #     self.diode_thread = Thread(target=self.start_diode)
+    #     self.diode_thread.start()
         
         
-    def start_diode(self):
-        self.diode_start_button.config(text="Stop Diode", bg="red", fg="white", command=self.stop_diode_thread)
-        cycle = 0
-        # Main Loop
+    # def start_diode(self):
+    #     self.diode_start_button.config(text="Stop Diode", bg="red", fg="white", command=self.stop_diode_thread)
+    #     cycle = 0
+    #     # Main Loop
 
-        self.run_diode = True
+    #     self.run_diode = True
 
-        while self.run_diode:
-            try:
-                self.diode_tracker.take_data()
-                update_time_left = 1000
-                update_frequency = 100
-                while update_time_left > 0:
-                    if update_time_left > update_frequency:
-                        self.after(update_frequency, self.update())
-                    else:
-                        self.after(update_time_left, self.update())
-                    update_time_left -= update_frequency
-                    if update_time_left % 3 == 0:
-                        if cycle < 3:
-                            cycle += 1
-                        else:
-                            cycle = 0
-                        self.diode_label.config(text=self.run_cycle[cycle])
-                if time.time() - self.diode_tracker.timestamp_today > 24*60*60:
-                    self.diode_tracker.save_data()
-                    self.diode_tracker.saved_data = np.array([])
-                    self.diode_tracker.get_today()
-                elif time.time() - self.diode_tracker.last_save > 60*60:
-                    self.diode_tracker.save_data()
+    #     while self.run_diode:
+    #         try:
+    #             try:
+    #                 self.diode_tracker.take_data()
+    #             except:
+    #                 print("Diode take_data failed")
+    #             update_time_left = 1000
+    #             update_frequency = 250
+    #             while update_time_left > 0:
+    #                 if update_time_left > update_frequency:
+    #                     self.after(update_frequency, self.update())
+    #                 else:
+    #                     self.after(update_time_left, self.update())
+    #                 update_time_left -= update_frequency
+    #                 if update_time_left % 3 == 0:
+    #                     if cycle < 3:
+    #                         cycle += 1
+    #                     else:
+    #                         cycle = 0
+    #                     self.diode_label.config(text=self.run_cycle[cycle])
+    #             if time.time() - self.diode_tracker.timestamp_today > 24*60*60:
+    #                 self.diode_tracker.save_data()
+    #                 self.diode_tracker.saved_data = np.array([])
+    #                 self.diode_tracker.get_today()
+    #             elif time.time() - self.diode_tracker.last_save > 60*60:
+    #                 self.diode_tracker.save_data()
                 
-            except Exception as e:
-                print(e)
-                if self.run_diode:
-                    self.diode_tracker.save_data()
-                    self.run_diode = False
-                    try:
-                        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
-                    except Exception as e:
-                        print(e)
+    #         except Exception:
+    #             traceback.print_exc()
+    #             if self.run_diode:
+    #                 self.diode_tracker.save_data()
+    #                 self.run_diode = False
+    #                 try:
+    #                     self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
+    #                 except Exception as e:
+    #                     print(e)
     
         
-    def stop_diode_thread(self):
-        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
-        self.run_diode = False
-        self.diode_label.config(text='')
+    # def stop_diode_thread(self):
+    #     self.run_diode = False
+    #     self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
+    #     self.diode_label.config(text='')
+
         
-    def start_mct_thread(self):
-        self.mct_thread = Thread(target=self.start_mct)
-        self.mct_thread.start()
+    # def start_mct_thread(self):
+    #     self.mct_thread = Thread(target=self.start_mct)
+    #     self.mct_thread.start()
     
-    def start_mct(self):
-        self.mct_start_button.config(text="Stop MCT", bg="red", fg="white", command=self.stop_mct_thread)
-        cycle = 0
-        # Main Loop
-        self.run_mct = True
+    # def start_mct(self):
+    #     self.mct_start_button.config(text="Stop MCT", bg="red", fg="white", command=self.stop_mct_thread)
+    #     cycle = 0
+    #     # Main Loop
+    #     self.run_mct = True
         
-        while self.run_mct:
-            try:
-                self.mct_tracker.take_data()
-                update_time_left = 1000
-                update_frequency = 100
-                while update_time_left > 0:
-                    if update_time_left > update_frequency:
-                        self.after(update_frequency, self.update())
-                    else:
-                        self.after(update_time_left, self.update())
-                    update_time_left -= update_frequency
-                    if update_time_left % 3 == 0:
-                        if cycle < 3:
-                            cycle += 1
-                        else:
-                            cycle = 0
-                        self.mct_label.config(text=self.run_cycle[cycle])
-                if time.time() - self.mct_tracker.timestamp_today > 24*60*60:
-                    self.mct_tracker.save_data()
-                    self.mct_tracker.saved_data = np.array([])
-                    self.mct_tracker.get_today()
-                elif time.time() - self.mct_tracker.last_save > 60*60:
-                    self.mct_tracker.save_data()   
-            except Exception as e:
-                print(e)
-                if self.run_mct:
-                    self.mct_tracker.save_data()
-                    self.run_mct = False
-                    try:
-                        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
-                    except Exception as e:
-                        print(e)
+    #     while self.run_mct:
+    #         try:
+    #             try:
+    #                 self.mct_tracker.take_data()
+    #             except:
+    #                 print("MCT take_data failed")
+    #             update_time_left = 1000
+    #             update_frequency = 250
+    #             while update_time_left > 0:
+    #                 if update_time_left > update_frequency:
+    #                     self.after(update_frequency, self.update())
+    #                 else:
+    #                     self.after(update_time_left, self.update())
+    #                 update_time_left -= update_frequency
+    #                 if update_time_left % 3 == 0:
+    #                     if cycle < 3:
+    #                         cycle += 1
+    #                     else:
+    #                         cycle = 0
+    #                     self.mct_label.config(text=self.run_cycle[cycle])
+    #             if time.time() - self.mct_tracker.timestamp_today > 24*60*60:
+    #                 self.mct_tracker.save_data()
+    #                 self.mct_tracker.saved_data = np.array([])
+    #                 self.mct_tracker.get_today()
+    #             elif time.time() - self.mct_tracker.last_save > 60*60:
+    #                 self.mct_tracker.save_data()   
+    #         except Exception:
+    #             traceback.print_exc()
+    #             if self.run_mct:
+    #                 self.mct_tracker.save_data()
+    #                 self.run_mct = False
+    #                 try:
+    #                     self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
+    #                 except Exception as e:
+    #                     print(e)
     
-    def stop_mct_thread(self):
-        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
-        self.run_mct = False
-        self.mct_label.config(text='')
+    # def stop_mct_thread(self):
+    #     self.run_mct = False
+    #     self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
+    #     self.mct_label.config(text='')
         
-    def start_R8_thread(self):
-        self.R8_thread = Thread(target=self.start_R8)
-        self.R8_thread.start()
+    # def start_R8_thread(self):
+    #     self.R8_thread = Thread(target=self.start_R8)
+    #     self.R8_thread.start()
     
+    # def start_R8(self):
+    #     self.R8_start_button.config(text="Stop R8", bg="red", fg="white", command=self.stop_R8_thread)
+    #     cycle = 0
+    #     # Main Loop
+    #     self.run_R8 = True
+        
+    #     while self.run_R8:
+    #         try:
+    #             try:
+    #                 self.R8_tracker.take_data()
+    #             except:
+    #                 print("R8 take_data failed")
+    #             update_time_left = 6*1000
+    #             update_frequency = 250
+    #             while update_time_left > 0:
+    #                 if update_time_left > update_frequency:
+    #                     self.after(update_frequency, self.update())
+    #                 else:
+    #                     self.after(update_time_left, self.update())
+    #                 update_time_left -= update_frequency
+    #                 if update_time_left % 3 == 0:
+    #                     if cycle < 3:
+    #                         cycle += 1
+    #                     else:
+    #                         cycle = 0
+    #                     self.R8_label.config(text=self.run_cycle[cycle])
+    #             if time.time() - self.R8_tracker.timestamp_today > 24*60*60:
+    #                 self.R8_tracker.save_data()
+    #                 self.R8_tracker.saved_data = np.array([])
+    #                 self.R8_tracker.get_today()
+    #             elif time.time() - self.R8_tracker.last_save > 60*60:
+    #                 self.R8_tracker.save_data()   
+    #         except Exception:
+    #             traceback.print_exc()
+    #             if self.run_R8:
+    #                 self.R8_tracker.save_data()
+    #                 self.run_R8 = False
+    #                 try:
+    #                     self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
+    #                 except Exception as e:
+    #                     print(e)
+    
+    # def stop_R8_thread(self):
+    #     self.run_R8 = False
+    #     self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
+    #     self.R8_label.config(text='')
+     
+    
+    # start
     def start_R8(self):
-        self.R8_start_button.config(text="Stop R8", bg="red", fg="white", command=self.stop_R8_thread)
-        cycle = 0
-        # Main Loop
+        self.R8_start_button.config(text="Stop R8", bg="red", fg="white", command=self.stop_R8)
         self.run_R8 = True
         
-        while self.run_R8:
+    def start_mct(self):
+        self.mct_start_button.config(text="Stop MCT", bg="red", fg="white", command=self.stop_mct)
+        self.run_mct = True
+    
+    def start_diode(self):
+        self.diode_start_button.config(text="Stop Diode", bg="red", fg="white", command=self.stop_diode)
+        self.run_diode = True
+    
+    # stop
+    def stop_R8(self):
+        self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8)
+        self.run_R8 = False
+        
+    def stop_mct(self):
+        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct)
+        self.run_mct = False
+    
+    def stop_diode(self):
+        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.start_diode)
+        self.run_diode = False
+    
+    def main(self):
+        cycle = 0
+        self.run_R8 = False
+        self.run_mct = False
+        self.run_diode = False
+        on=True
+        while on:
             try:
-                self.R8_tracker.take_data()
-                update_time_left = 6*1000
+                if self.run_R8:
+                    self.R8_tracker.take_data()
+                if self.run_mct:
+                    self.mct_tracker.take_data()
+                if self.run_diode:
+                    self.diode_tracker.take_data()
+                    
+                update_time_left = 1000
                 update_frequency = 250
                 while update_time_left > 0:
                     if update_time_left > update_frequency:
@@ -254,15 +341,35 @@ class mainwindow_tkApp(tk.Tk):
                             cycle += 1
                         else:
                             cycle = 0
-                        self.R8_label.config(text=self.run_cycle[cycle])
+                        if self.run_R8:
+                            self.R8_label.config(text=self.run_cycle[cycle])
+                        if self.run_mct:
+                            self.mct_label.config(text=self.run_cycle[cycle])
+                        if self.run_diode:
+                            self.diode_label.config(text=self.run_cycle[cycle])
+                            
                 if time.time() - self.R8_tracker.timestamp_today > 24*60*60:
                     self.R8_tracker.save_data()
                     self.R8_tracker.saved_data = np.array([])
                     self.R8_tracker.get_today()
                 elif time.time() - self.R8_tracker.last_save > 60*60:
-                    self.R8_tracker.save_data()   
-            except Exception as e:
-                print(e)
+                    self.R8_tracker.save_data() 
+                if time.time() - self.mct_tracker.timestamp_today > 24*60*60:
+                    self.mct_tracker.save_data()
+                    self.mct_tracker.saved_data = np.array([])
+                    self.mct_tracker.get_today()
+                elif time.time() - self.mct_tracker.last_save > 60*60:
+                    self.mct_tracker.save_data()
+                if time.time() - self.diode_tracker.timestamp_today > 24*60*60:
+                    self.diode_tracker.save_data()
+                    self.diode_tracker.saved_data = np.array([])
+                    self.diode_tracker.get_today()
+                elif time.time() - self.diode_tracker.last_save > 60*60:
+                    self.diode_tracker.save_data()
+                    
+            except Exception:
+                traceback.print_exc()
+                on = False
                 if self.run_R8:
                     self.R8_tracker.save_data()
                     self.run_R8 = False
@@ -270,12 +377,22 @@ class mainwindow_tkApp(tk.Tk):
                         self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
                     except Exception as e:
                         print(e)
-    
-    def stop_R8_thread(self):
-        self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
-        self.run_R8 = False
-        self.R8_label.config(text='')
+                if self.run_mct:
+                    self.mct_tracker.save_data()
+                    self.run_mct = False
+                    try:
+                        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
+                    except Exception as e:
+                        print(e)
+                if self.run_diode:
+                    self.diode_tracker.save_data()
+                    self.run_diode = False
+                    try:
+                        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
+                    except Exception as e:
+                        print(e)
+
         
 if __name__ == "__main__":
     App = mainwindow_tkApp()
-    App.mainloop()
+    App.main()
