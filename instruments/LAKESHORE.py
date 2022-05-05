@@ -38,12 +38,14 @@ class LS370:
         for idx, channel in enumerate(channels):
             if channel is not self.current_channel:
                 self.inst.write("SCAN {:d},0".format(channel))
+                self.current_channel = channel
                 plt.pause(wait_time)
             measurements.append([channel, self.Read_R(channel)])
         return measurements
         
     def Scan(self, channel=1):
         self.inst.write("SCAN "+str(channel))
+        self.current_channel = channel
         
     def Ask_Heater_Range(self, channel):
         return float(self.inst.query("HTRRNG?").rstrip())
