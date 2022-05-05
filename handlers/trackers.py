@@ -223,14 +223,9 @@ class lakeshore_tracker:
 
     def save_data(self):
         if np.array(self.data).ndim > 1:
-            directory = "data/"+self.save_folder
-            if not os.path.exists(directory):
-                os.makedirs(directory)
             header = "Time, s"
             for name in self.channel_list:
                 header = header + "\tChannel {}: {}, Ohms".format(name, self.channel_dict['channel {}'.format(name)])
-            if not os.path.exists(directory):
-                os.makedirs(directory)
             # file_name = filetag_YearMonthDay_#.dat
             file_name = self.getfilename()
             np.savetxt(file_name, self.data, header=header,
@@ -240,6 +235,8 @@ class lakeshore_tracker:
             except:
                 self.saved_data = np.array(self.data)
             self.data = []
+            self.last_save = time.time()
+            
 
     # def save_fig(self, directory=r'archive_data\data\figures', num=0):
     #     if not os.path.exists(directory):
@@ -353,6 +350,7 @@ class diode_tracker:
             except:
                 self.saved_data = np.array(self.data)
             self.data = []
+            self.last_save = time.time()
 
     def save_fig(self, directory='data/diode/figures', num=0):
         if not os.path.exists(directory):
@@ -429,6 +427,7 @@ class mct_tracker:
             except:
                 self.saved_data = np.array(self.data)
             self.data = []
+            self.last_save = time.time()
 
     def update_temperature_file(self):
         np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\mct_temp.dat", X=np.array(self.data[-1]), delimiter='\t', header="Time, s\tTemperature, K")
