@@ -82,7 +82,7 @@ class tkApp(tk.Tk):
                         "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
                         "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
                         "Wait Time, ms": int(self.config["Frequency Sweep Settings"]["Wait Time, ms"]),
-                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
+                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive, V"])
                       }
         
         # Interface frames
@@ -230,7 +230,7 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'Phase, deg', '0')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
         self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1000')
-        self.config.set('Frequency Sweep Settings', 'Drive', '0.1')
+        self.config.set('Frequency Sweep Settings', 'Drive, V', '0.1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
         
         self.config.add_section("Instrument Settings")
