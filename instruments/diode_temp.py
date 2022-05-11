@@ -32,10 +32,15 @@ def Diode_Fit(Z):
     return T
     
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    
     Diode_Fit_Vec = np.vectorize(Diode_Fit)
     
-    multimeter=AGILENT_MULTIMETER("GPIB0::3::INSTR")
+    # multimeter=AGILENT_MULTIMETER("GPIB0::3::INSTR")
     
-    V = multimeter.Read_V()
+    # V = multimeter.Read_V()
+    V = np.linspace(0,5, 1000)
+    plt.figure()
+    plt.plot(Diode_Fit_Vec(V), V)
     
-    print("\nTime: {:s}\nDiode Voltage: {:.4f} V\nTemperature:   {:.2f} K".format(datetime.now().strftime("%H:%M:%S %m/%d/%y"), V, Diode_Fit_Vec(V)))
+    # print("\nTime: {:s}\nDiode Voltage: {:.4f} V\nTemperature:   {:.2f} K".format(datetime.now().strftime("%H:%M:%S %m/%d/%y"), V, Diode_Fit_Vec(V)))

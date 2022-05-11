@@ -13,7 +13,7 @@ import tkinter as tk
 from instruments import LOCKIN
 from instruments import AGILENT_SIGNAL_GEN
 from instruments import SignalGenerators
-from instruments.Liquid_Instruments import MokuLab
+# from instruments.Liquid_Instruments import MokuLab
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -44,46 +44,20 @@ class tkApp(tk.Tk):
         
         self.config = configparser.RawConfigParser()
         
-        if not os.path.exists('TFMI_Config.cfg'):
+        self.config_directory = "configs/"
+        self.config_name = 'TFMI_Config.cfg'
+        
+        self.config_label = tk.Label(self, text=self.config_name)
+        self.config_label.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(1*self.scaling_factor["y"]))
+        
+        if not os.path.exists(self.config_directory+self.config_name):
             self.initConfig()
             
         # Read configurations using section and key to get the value
-        self.config.read('TFMI_Config.cfg')
+        self.config.read(self.config_directory+self.config_name)
+        self.load_config(initial=True)
         
         self.save_interval = 60 # in minutes
-        self.tracking_range = float(self.config["Tracking Settings"]["Range"])
-        
-        self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
-                             save_folder=self.config["Monitor Save Settings"]["Save Folder"])
-        self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
-        self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
-        
-        NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
-        NewGenSet = self.set_signalgen(self.config["Instrument Settings"]["signal-gen model"], self.config["Instrument Settings"]["signal-gen gpib"])
-            
-        if NewLockinSet == False or NewGenSet == False:
-            if not NewLockinSet:
-                print("Something went wrong with Lock-in GPIB settings")
-            if not NewGenSet:
-                print("Something went wrong with Signal-Gen GPIB settings")
-            self.settingsWindow()
-        
-        try:
-            self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
-        except:
-            print("Drive Not Set Properly")
-        try:
-            self.lockin.Set_Phase(float(self.config["Frequency Sweep Settings"]["Phase, deg"]))
-        except:
-            print("Phase Not Set Properly")
-        
-        self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
-                        "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
-                        "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
-                        "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
-                        "Wait Time, ms": int(self.config["Frequency Sweep Settings"]["Wait Time, ms"]),
-                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive, V"])
-                      }
         
         # Interface frames
         self.wm_title("Freq Sweep Alpha")
@@ -230,7 +204,7 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'Phase, deg', '0')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
         self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1000')
-        self.config.set('Frequency Sweep Settings', 'Drive, V', '0.1')
+        self.config.set('Frequency Sweep Settings', 'Drive', '0.1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
         
         self.config.add_section("Instrument Settings")
@@ -252,15 +226,56 @@ class tkApp(tk.Tk):
         self.config.add_section("Tracking Settings")
         self.config.set("Tracking Settings", "Range", "6")
         
-        with open('TFMI_Config.cfg', 'w') as output:
+        with open(self.config_directory+self.current_config, 'w') as output:
             self.config.write(output)
+    
+    def load_config(self, initial=False):
+        
+        self.tracking_range = float(self.config["Tracking Settings"]["Range"])
+        
+        self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
+                             save_folder=self.config["Monitor Save Settings"]["Save Folder"])
+        self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        
+        NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
+        NewGenSet = self.set_signalgen(self.config["Instrument Settings"]["signal-gen model"], self.config["Instrument Settings"]["signal-gen gpib"])
+            
+        if NewLockinSet == False or NewGenSet == False:
+            if not NewLockinSet:
+                print("Something went wrong with Lock-in GPIB settings")
+            if not NewGenSet:
+                print("Something went wrong with Signal-Gen GPIB settings")
+            self.settingsWindow()
+        
+        try:
+            self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        except:
+            print("Drive Not Set Properly")
+        try:
+            self.lockin.Set_Phase(float(self.config["Frequency Sweep Settings"]["Phase, deg"]))
+        except:
+            print("Phase Not Set Properly")
+        
+        self.params = { "Start Frequency": float(self.config["Frequency Sweep Settings"]["Start Frequency"]),
+                        "End Frequency": float(self.config["Frequency Sweep Settings"]["End Frequency"]),
+                        "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
+                        "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
+                        "Wait Time, ms": int(self.config["Frequency Sweep Settings"]["Wait Time, ms"]),
+                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
+                      }
+        if not initial:
+            self.update_sweep_params()
+            self.fitBool.set(int(self.config["Monitor Checkbox Settings"]["Fitting"]))
+            self.trackBool.set(int(self.config["Monitor Checkbox Settings"]["Tracking"]))
+    
     
     def updateConfig(self, section, key, value):
     #Update config using section key and the value to change
     #call this when you want to update a value in configuation file
     # with some changes you can save many values in many sections
         self.config.set(section, key, value)
-        with open('TFMI_Config.cfg', 'w') as output:
+        with open(self.config_directory+self.config_name, 'w') as output:
             self.config.write(output)
             
     def update_checkbox_config(self):
@@ -325,7 +340,7 @@ class tkApp(tk.Tk):
         self.SG_Model_Options.place(anchor="nw", x=160, y=68)
 
         # Save Folder
-        self.Save_Folder_entry = tk.Entry(sWin, width=12)
+        self.Save_Folder_entry = tk.Entry(sWin, width=20)
         self.Save_Folder_entry.insert(0, self.config["Monitor Save Settings"]["Save Folder"])
         self.Save_Folder_entry.place(anchor="nw", x=100, y=120)
         
@@ -333,7 +348,7 @@ class tkApp(tk.Tk):
         Folder_Label.place(x=15, y=120)
         
         # TF Name
-        self.TF_savename = tk.Entry(sWin, width=12)
+        self.TF_savename = tk.Entry(sWin, width=20)
         self.TF_savename.insert(0, self.config["Monitor Save Settings"]["Tuning Fork Name"])
         self.TF_savename.place(anchor="nw", x=100, y=150)
         
@@ -351,6 +366,11 @@ class tkApp(tk.Tk):
         except:
             pass
         
+        self.config_name_label = tk.Label(sWin, text=self.config_name)
+        self.config_name_label.place(x=300, y=35)
+        
+        Config_Button = tk.Button(sWin, text="Select Config", command=self.change_config)
+        Config_Button.place(x=300, y=60)
         
         
         ###### TODO #######
@@ -364,14 +384,6 @@ class tkApp(tk.Tk):
         
         Current_Amp_Label = tk.Label(sWin, text="Current Amp")
         Current_Amp_Label.place(x=300, y=120)
-        
-        # TF Name
-        self.drive_entry = tk.Entry(sWin, width=12)
-        self.drive_entry.insert(0, self.config["Frequency Sweep Settings"]["Drive"])
-        self.drive_entry.place(anchor="nw", x=400, y=150)
-        
-        Drive_Label = tk.Label(sWin, text="Drive, V")
-        Drive_Label.place(x=300, y=150)
 
         
         ###### END OF TODO ######
@@ -382,6 +394,26 @@ class tkApp(tk.Tk):
         close_button.place(anchor="se", x=525, y=345)
 
         # self.wait_window(self)
+    
+    def load_settings_text(self):
+        self.Lockin_GPIB.delete(0,'end')
+        self.Lockin_GPIB.insert(0, self.config["Instrument Settings"]["Lock-in GPIB"])
+        self.SignalGen_GPIB.delete(0,'end')
+        self.SignalGen_GPIB.insert(0, self.config["Instrument Settings"]["Signal-Gen GPIB"])
+        self.Lockin_Model.set(self.config["Instrument Settings"]["Lock-in Model"])
+        self.SignalGen_Model.set(self.config["Instrument Settings"]["Signal-Gen Model"])
+        self.Save_Folder_entry.delete(0,'end')
+        self.Save_Folder_entry.insert(0, self.config["Monitor Save Settings"]["Save Folder"])
+        self.TF_savename.delete(0,'end')
+        self.TF_savename.insert(0, self.config["Monitor Save Settings"]["Tuning Fork Name"])
+        self.config_name_label.config(text=self.config_name)
+        self.current_amp_entry.delete(0,'end')
+        self.current_amp_entry.insert(0, float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
+        self.fit_Label.config(text="Next Fit File: \t\t"+next_fit_name)
+        next_sweep_name = "/data/{}/sweeps_{}".format(self.TFdata.save_folder, self.TFdata.today)
+        self.sweep_label.config(text="Current Sweep Folder: \t"+next_sweep_name)
+        
         
     def save_settings(self):
         
@@ -417,16 +449,15 @@ class tkApp(tk.Tk):
             self.updateConfig("Frequency Sweep Settings", "Current Amp", self.current_amp_entry.get())
             self.TFdata.set_current_amp(float(self.current_amp_entry.get()))
             
-        if isStrFloat(self.drive_entry.get()):
-            try:
-                self.gen.Set_Voltage(float(self.drive_entry.get()))
-                self.TFdata.set_drive(float(self.drive_entry.get()))
-                self.updateConfig("Frequency Sweep Settings", "Drive", self.drive_entry.get())
-                self.label_list[5].config(text="Drive, V: "+self.drive_entry.get())
-            except:
-                self.Drive_Label.delete(0, 'end')
-                self.Drive_Label.insert(0, self.config["Frequency Sweep Settings"]["Drive"])
-                print("Drive Not Set")
+                
+    def change_config(self):
+        new_config_file = tk.filedialog.askopenfilename(initialdir=self.config_directory)
+        # print(new_config_file, new_config_file.split('/')[-1])
+        self.config_name = new_config_file.split('/')[-1]
+        self.config.read(self.config_directory+self.config_name)
+        self.load_config()
+        self.load_settings_text()
+        self.config_label.config(text=self.config_name)
                 
     def update_sweep_params(self):
         old_params = self.params
@@ -450,8 +481,8 @@ class tkApp(tk.Tk):
                             self.params[key] = old_params[key]
                             print("Phase Not Set Properly")
                     self.updateConfig('Frequency Sweep Settings', key, self.params[key])
-                    self.label_list[idx].config(text=key+": {}".format(self.params[key]))
                     self.entry_list[idx].delete(0, 'end')
+                self.label_list[idx].config(text=key+": {}".format(self.params[key]))
             except Exception as e:
                 print(e)
 
@@ -461,12 +492,12 @@ class tkApp(tk.Tk):
                 self.lockin = LOCKIN.LI5640("GPIB0::"+GPIB+"::INSTR")
             elif model == "SR 830":
                 self.lockin = LOCKIN.SR830("GPIB0::"+GPIB+"::INSTR")
-            elif model == "Moku":
-                try:
-                    self.gen = self.MokuLab.instrument_dict["Lock-in Amplifier"]
-                except:
-                    self.lockin = MokuLab("IP", GPIB).enable_lockin(2)
-                    self.gen = self.MokuLab["Lock-in Amplifier"]
+            # elif model == "Moku":
+            #     try:
+            #         self.gen = self.MokuLab.instrument_dict["Lock-in Amplifier"]
+            #     except:
+            #         self.lockin = MokuLab("IP", GPIB).enable_lockin(2)
+            #         self.gen = self.MokuLab["Lock-in Amplifier"]
             elif model == "Testing":
                 print("lock-in is in testing mode")
                 self.lockin = LOCKIN.test_lockin("GPIB0::"+GPIB+"::INSTR")
@@ -480,12 +511,12 @@ class tkApp(tk.Tk):
         try:
             if model == "Keysight" or model == "Agilent":
                 self.gen = AGILENT_SIGNAL_GEN.AGILENT_SIGNAL_GEN("GPIB0::"+GPIB+"::INSTR")
-            elif model == "Moku":
-                try:
-                    self.gen = self.MokuLab.instrument_dict["Waveform Generator"]
-                except:
-                    self.MokuLab("IP", GPIB).enable_signal_gen(1)
-                    self.gen = self.MokuLab["Waveform Generator"]
+            # elif model == "Moku":
+            #     try:
+            #         self.gen = self.MokuLab.instrument_dict["Waveform Generator"]
+            #     except:
+            #         self.MokuLab("IP", GPIB).enable_signal_gen(1)
+            #         self.gen = self.MokuLab["Waveform Generator"]
             elif model == "Testing":
                 print("signal-gen is in testing mode")
                 self.gen = SignalGenerators.test_gen("GPIB0::"+GPIB+"::INSTR")

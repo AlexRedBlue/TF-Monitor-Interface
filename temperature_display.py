@@ -17,6 +17,7 @@ from functions.info import ticks_to_hours
 
 from datetime import datetime
 from time import mktime
+import time
 
 import numpy as np
 import glob
@@ -31,7 +32,7 @@ class tkApp(tk.Tk):
         self.state("zoomed")
         self.init_window_size()
         self.state("normal")
-        self.geometry("{}x{}".format(int(self.screen_size["x"]/1.5), int(self.screen_size["y"]/1.5)))
+        self.geometry("{}x{}".format(int(self.screen_size["x"]/1.5), int(self.screen_size["y"]/1.2)))
         self.init_window_size()
 
         
@@ -44,14 +45,22 @@ class tkApp(tk.Tk):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.graph_1)
         self.toolbar.update()
         self.canvas.get_tk_widget().pack(in_=self.graph_1)
+        self.canvas.mpl_connect("key_press_event", self.on_key_press)
+        
+        self.line_styles = ["-", 'o', '.', ',']
+        self.graph_line_style = tk.StringVar(self)
+        self.graph_line_style.set(self.line_styles[0])
+        self.line_option = tk.OptionMenu(self, self.graph_line_style, *self.line_styles)
+        self.line_option.place(x=int(self.win_zoom_size["x"]/2-100), y=self.win_zoom_size["y"]-45)
+
+        self.start_button = tk.Button(master=self, text="Run", bg='green', fg='white', height=2, width=9, command=self.run)
+        self.start_button.place(x=int(self.win_zoom_size["x"]/2-20), y=self.win_zoom_size["y"]-50)
+        
+        self.reset_button = tk.Button(self, text='reset', bg='red', fg='white', command=self.reset_data)
+        self.reset_button.place(x=int(self.win_zoom_size["x"] - 60), y=self.win_zoom_size["y"]-40)
         
         self.reset_data()
 
-        self.reset_button = tk.Button(self, text='reset', bg='red', fg='white', command=self.reset_data)
-        self.reset_button.place(x=int(self.win_zoom_size["x"]/2), y=self.win_zoom_size["y"]-40)
-        
-        self.canvas.mpl_connect("key_press_event", self.on_key_press)
-                
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def on_closing(self):
@@ -151,37 +160,38 @@ class tkApp(tk.Tk):
             power = 6
             label = "{:.1f}".format(T*10**power)
             units = " uK"
+        else:
+            power = 1
+            label = ""
+            units = ""
         return label, units, power
             
-    def graph_data(self): 
+    def graph_data(self):
+        time0 = time.time()
+        time1 = time.time()
         for key in self.temperature_fnames:
             self.graph_dict[key].clear()
-            try:
+            if len(self.data[key]["temperature"]) > 0:
                 label, units, power = self.create_label(self.data[key]["temperature"][-1])
-            except:
+            else:
                 label, units, power = '', '', 0
             # print(label, power, units)
-            self.graph_dict[key].plot(np.asarray(self.data[key]["time"]), np.asarray(self.data[key]["temperature"])*(10**power), label=label+units)
+            self.graph_dict[key].plot(np.asarray(self.data[key]["time"]), 
+                                      np.asarray(self.data[key]["temperature"])*(10**power), 
+                                      self.graph_line_style.get(), label=label+units)
             self.graph_dict[key].set_xlabel("time, s")
             ylabel = key.split('\\')[-1][0:-4]
             self.graph_dict[key].set_ylabel(ylabel+units)
-            self.graph_dict[key].legend(loc=2)
-            try:
+            if label != '':
+                self.graph_dict[key].legend(loc=2)
+            
+            if len(self.data[key]["time"]) > 0:
                 if time0 > self.data[key]["time"][0]:
                     time0 = self.data[key]["time"][0]
-            except:
-                try:
-                    time0 = self.data[key]["time"][0]
-                except:
-                    pass
-            try:
                 if time1 < self.data[key]["time"][-1]:
                     time1 = self.data[key]["time"][-1]
-            except:
-                try:
-                    time1 = self.data[key]["time"][-1]
-                except:
-                    pass
+                
+
         try:
             ticks_to_hours(self.graph_dict[self.temperature_fnames[0]], time0, time1)
         except:
@@ -191,6 +201,7 @@ class tkApp(tk.Tk):
                 
     def run(self):
         self.on = True
+        self.start_button.config(text="Pause", bg="red", fg="white", command=self.pause)
         while self.on:
             try:
                 new_data = self.read_data()
@@ -206,14 +217,20 @@ class tkApp(tk.Tk):
                     else:
                         self.after(update_time_left, self.update())
                     update_time_left -= update_frequency
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
-                self.on = False
+            except Exception:
+                if self.on:
+                    self.on = False
+                    traceback.print_exc()
+
+                
+    def pause(self):
+        self.on = False
+        self.start_button.config(text="Run", bg="green", fg="white", command=self.run)
+        
             
 
     
     
 if __name__ == "__main__":
     myApp = tkApp()
-    myApp.run()
+    myApp.mainloop()

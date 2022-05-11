@@ -120,6 +120,7 @@ class ac_susceptometer_tracker:
             np.asarray(self.data)[:,4], color='coral')
         
 ######################################## LAKESHORE ########################################
+from scipy import interpolate
 class lakeshore_tracker:
     
     channel_dict= {
@@ -138,93 +139,113 @@ class lakeshore_tracker:
         self.lakeshore = lakeshore
         print(self.lakeshore.ID, " initialized.\n")
         self.channel_list = channel_list
+        self.last_save = time.time()
+        self.save_folder = "R8_2022"
+        self.file_tag = "R8"
         self.load_calibration()
+        self.saved_data = np.array([])
         self.data = []
-        self.get_date()
+        self.get_today()
         self.save_num = 0
         
     def load_calibration(self):
-        calibration_directory = r"C:\Users\physics-svc-mkdata\Documents\GitHub\data-monitoring\calibration"
+        calibration_directory = r"C:\Users\physics-svc-mkdata\Documents\GitHub\TF-Monitor-Interface\calibration"
         file_name = "\\08-20-08-26_rvt_calibration_main.dat"
         R8_file_name = "\\R8_RT_Curve.dat"
-        self.calibration = np.loadtxt(calibration_directory+file_name, delimiter="\t", skiprows=1)
-        self.R8_calibration = np.loadtxt(calibration_directory+R8_file_name, delimiter="\t", skiprows=1)
-        self.R8_sorted = self.R8_calibration[:,0].argsort()
-        self.r_sorted_list = list()
-        for i in range(self.calibration.shape[1]-2):
-            self.r_sorted_list.append(self.calibration[:,i+2].argsort())
-            
+        calibration = np.loadtxt(calibration_directory+file_name, delimiter="\t", skiprows=1)
+        R8_calibration = np.loadtxt(calibration_directory+R8_file_name, delimiter="\t", skiprows=1)
+        R8_calibration = R8_calibration[R8_calibration[:,0].argsort(), :]
+        self.R8_tck = interpolate.splrep(R8_calibration[:, 0], R8_calibration[:, 1])
+        self.r_tck_list = []
+        for i in range(calibration.shape[1]-2):
+            argsort_R = calibration[:, i+2].argsort()
+            self.r_tck_list.append(interpolate.splrep(calibration[argsort_R, i+2], calibration[argsort_R, 0]))
+    
+    def get_today(self):
+        now = datetime.now()
+        self.today = datetime(year=now.year, month=now.month, day=now.day)
+        self.timestamp_today = time.mktime(self.today.timetuple())
+        self.today = self.today.strftime("%Y-%m-%d")       
+    
     def update_temperature_file(self):
         current_temp, bound = self.get_current_temp(self.data[-1][1], 1)
-        with open(r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\R8_temp.dat", "w") as temperature_file:
-            temperature_file.write("time, s\tresistance, ohm\ttemperature, K\n")
-            temperature_file.write("{}\t{}\t{}".format(self.data[-1][0], self.data[-1][1], current_temp))
-        
+        np.savetxt(r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\R8_temp.dat", np.array([self.data[-1][0], current_temp]), header = "Time, s\tTemperature, K")
+    
+    # def get_current_temp(self, resistance, channel):
+    #     if channel==1:
+    #         temp = np.interp(resistance, (self.R8_calibration[:, 0])[self.R8_sorted], (self.R8_calibration[:, 1])[self.R8_sorted])
+    #         if resistance < self.R8_calibration[0, 0]:
+    #             boundary = 2
+    #             temp = self.R8_calibration[0, 1]
+    #         elif resistance > self.R8_calibration[-1, 0]:
+    #             boundary = 1
+    #             temp = self.R8_calibration[-1, 1]
+    #         else:
+    #             boundary = 0
+    #         return temp,  boundary
+    #     else:
+    #         r_sorted = self.r_sorted_list[channel-1]
+    #         temp = np.interp(resistance, (self.calibration[:, channel+1])[r_sorted], (self.calibration[:, 0])[r_sorted])
+    #         if resistance < ((self.calibration[:, channel+1])[r_sorted])[0]:
+    #             boundary = 2
+    #             temp = ((self.calibration[:, 0])[r_sorted])[0]
+    #         elif resistance > ((self.calibration[:, channel+1])[r_sorted])[-1]:
+    #             boundary = 1
+    #             temp = ((self.calibration[:, 0])[r_sorted])[-1]
+    #         else:
+    #             boundary = 0
+    #         return temp, boundary
+    
     def get_current_temp(self, resistance, channel):
         if channel==1:
-            temp = np.interp(resistance, (self.R8_calibration[:, 0])[self.R8_sorted], (self.R8_calibration[:, 1])[self.R8_sorted])
-            if resistance < self.R8_calibration[0, 0]:
-                boundary = 2
-                temp = self.R8_calibration[0, 1]
-            elif resistance > self.R8_calibration[-1, 0]:
-                boundary = 1
-                temp = self.R8_calibration[-1, 1]
-            else:
-                boundary = 0
-            return temp,  boundary
+            temp = interpolate.splev(-1*resistance,self.R8_tck)  
         else:
-            r_sorted = self.r_sorted_list[channel-1]
-            temp = np.interp(resistance, (self.calibration[:, channel+1])[r_sorted], (self.calibration[:, 0])[r_sorted])
-            if resistance < ((self.calibration[:, channel+1])[r_sorted])[0]:
-                boundary = 2
-                temp = ((self.calibration[:, 0])[r_sorted])[0]
-            elif resistance > ((self.calibration[:, channel+1])[r_sorted])[-1]:
-                boundary = 1
-                temp = ((self.calibration[:, 0])[r_sorted])[-1]
-            else:
-                boundary = 0
-            return temp, boundary
-        
-    def get_date(self):
-        now = datetime.now()
-        self.date = datetime(year=now.year, month=now.month, day=now.day)
-        self.timestamp_today = time.mktime(self.date.timetuple())
-        
+            temp = interpolate.splev(-1*resistance, self.r_tck_list[channel-1])
+        boundary = 0   
+        return temp, boundary
+            
     def take_data(self, wait_time=5):
         R_values = [time.time()]
         reading = self.lakeshore.Autoscan(channels=self.channel_list, wait_time=wait_time)
         for idx, item in enumerate(reading):
             R_values.append(reading[idx][1])
         self.data.append(R_values)
+        self.update_temperature_file()
         
-    def getfilename(self, directory, file_tag):
-        if os.path.isfile(directory+file_tag + '_{:s}_{:d}.dat'.format(self.date.strftime("%Y-%m-%d"), self.save_num)):
-            self.save_num += 1
-            return self.getfilename(directory, file_tag)
-        return file_tag + '_{:s}_{:d}.dat'.format(self.date.strftime("%Y-%m-%d"), self.save_num)
+    def getfilename(self, num=0):
+        save_directory = "data/{}".format(self.save_folder)
+        fname = "/{}_{}__{}.dat".format(self.file_tag, self.today, num)
+        if not os.path.isdir(save_directory):
+            os.makedirs(save_directory)
+        if os.path.isfile(save_directory+fname):
+            return self.getfilename(num+1)
+        return save_directory+fname
 
-    def save_data(self, directory=r'data\rt_data', file_tag=r'\rt', 
-                  header="Time, s"):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        for name in self.channel_list:
-            header = header + "\tChannel {}: {}, Ohms".format(name, self.channel_dict['channel {}'.format(name)])
-        
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        # file_name = filetag_YearMonthDay_#.dat
-        file_name = self.getfilename(directory, file_tag)
-        np.savetxt(directory+file_name, self.data, header=header,
-                   delimiter="\t")
+    def save_data(self):
+        if np.array(self.data).ndim > 1:
+            header = "Time, s"
+            for name in self.channel_list:
+                header = header + "\tChannel {}: {}, Ohms".format(name, self.channel_dict['channel {}'.format(name)])
+            # file_name = filetag_YearMonthDay_#.dat
+            file_name = self.getfilename()
+            np.savetxt(file_name, self.data, header=header,
+                       delimiter="\t")
+            try: 
+                self.saved_data = np.concatenate((self.saved_data, self.data))
+            except:
+                self.saved_data = np.array(self.data)
+            self.data = []
+            self.last_save = time.time()
+            
 
-    def save_fig(self, directory=r'archive_data\data\figures', num=0):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        fname = directory + "\\{}_rt_{}.png".format(self.date.strftime("%Y-%m-%d"), num)
-        if os.path.isfile(fname) == False:
-            self.fig.savefig(fname)
-        else:
-            return self.save_fig(directory, num+1)
+    # def save_fig(self, directory=r'archive_data\data\figures', num=0):
+    #     if not os.path.exists(directory):
+    #         os.makedirs(directory)
+    #     fname = directory + "\\{}_rt_{}.png".format(self.date.strftime("%Y-%m-%d"), num)
+    #     if os.path.isfile(fname) == False:
+    #         self.fig.savefig(fname)
+    #     else:
+    #         return self.save_fig(directory, num+1)
 
     def initialize_graphs(self):
         plt.ion()
@@ -292,13 +313,18 @@ class diode_tracker:
         self.today = self.today.strftime("%Y-%m-%d")
     
     def update_temperature_file(self):
-        np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\diode_temp.dat", X=self.data[-1], delimiter='\t', header="Time, s\tTemperature, K")
+        T = self.data[-1][2]
+        time = self.data[-1][0]
+        np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\diode_temp.dat", X=[time, T], delimiter='\t', header="Time, s\tTemperature, K")
     
     def take_data(self):
         # TODO
         # Read data from multimeter
         V = self.multimeter.Read_V()
-        T = self.Diode_Fit_Vec(np.abs(V))
+        try:
+            T = self.Diode_Fit_Vec(np.abs(V))
+        except:
+            T = np.nan
         self.data.append([time.time(), V, T])
         try:
             self.update_temperature_file()
@@ -324,6 +350,7 @@ class diode_tracker:
             except:
                 self.saved_data = np.array(self.data)
             self.data = []
+            self.last_save = time.time()
 
     def save_fig(self, directory='data/diode/figures', num=0):
         if not os.path.exists(directory):
@@ -400,9 +427,10 @@ class mct_tracker:
             except:
                 self.saved_data = np.array(self.data)
             self.data = []
+            self.last_save = time.time()
 
     def update_temperature_file(self):
-        np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\mct_temp.dat", X=self.data[-1], delimiter='\t', header="Time, s\tTemperature, K")
+        np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\mct_temp.dat", X=np.array(self.data[-1]), delimiter='\t', header="Time, s\tTemperature, K")
     
     def take_data(self):
         V = self.DVM.Read_V()
