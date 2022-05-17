@@ -692,10 +692,11 @@ class tkApp(tk.Tk):
     def clearData(self):
         self.run = False
         self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
-        self.TFdata.daily_save()
-        self.TFdata.store_last_sweep([])
-        self.graph_fits()
-        self.graph_sweep()
+        if tk.messagebox.askokcancel("Clear Graphs", "Confirm"):
+            self.TFdata.daily_save()
+            self.TFdata.store_last_sweep([])
+            self.graph_fits()
+            self.graph_sweep()
                 
     def sweep(self):
         self.TFdata.reset_sweep()
