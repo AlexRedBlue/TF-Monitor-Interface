@@ -116,6 +116,18 @@ class tkApp(tk.Tk):
         self.param_label_frame_2 = tk.Frame(self)
         self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         
+        # Sensitivity Options
+        self.sensitivity = tk.StringVar(self)
+        self.sensitivity.set(self.current_sens) # default value
+        self.sens_options = tk.OptionMenu(self, self.sensitivity, *self.sens_list, command=self.switchSens)
+        self.sens_options.place(x="{}i".format(6.5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
+        
+        # Time Constant Options
+        self.time_constant = tk.StringVar(self)
+        self.time_constant.set(self.current_time_constant) # default value
+        self.time_constant_options = tk.OptionMenu(self, self.time_constant, *self.time_constant_list, command=self.switchTC)
+        self.time_constant_options.place(x="{}i".format(6.5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+1.25))
+        
         # Checkbox Frame
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
@@ -277,7 +289,7 @@ class tkApp(tk.Tk):
             self.settingsWindow()
         
         try:
-            self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive"]))
+            self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive, V"]))
         except:
             print("Drive Not Set Properly")
         try:
@@ -305,6 +317,7 @@ class tkApp(tk.Tk):
         self.config.set(section, key, value)
         with open(self.config_directory+self.config_name, 'w') as output:
             self.config.write(output)
+            
             
     def update_checkbox_config(self):
         self.updateConfig("Monitor Checkbox Settings", "Fitting", self.fitBool.get())
@@ -338,7 +351,23 @@ class tkApp(tk.Tk):
                                 "height": self.win_zoom_size["y"]/self.default_dpi}
         self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
                                "y": self.screen_size_inches["height"]/default_screen_size["height"]}
+     
+    def switchSens(self, event):
+        try:
+            # print(event)
+            self.lockin.Set_Sensitivity(event)
+            self.current_sens = event
+        except:
+            self.sensitivity.set(self.current_sens)
         
+    def switchTC(self, event):
+        try:
+            # print(event)
+            self.lockin.Set_Time_Constant(event)
+            self.current_time_constant = event
+        except:
+            traceback.print_exc()
+            self.time_constant.set(self.current_time_constant)
     
     def settingsWindow(self):
         sWin = tk.Toplevel(self)
@@ -501,8 +530,6 @@ class tkApp(tk.Tk):
         self.config_label.config(text=self.config_name)
         if not initial:
             self.load_settings_text()
-        
-
                 
     def update_sweep_params(self):
         old_params = self.params
@@ -551,8 +578,42 @@ class tkApp(tk.Tk):
                 self.lockin = LOCKIN.test_lockin("GPIB0::"+GPIB+"::INSTR")
             else:
                 print("Invalid Lock-in Instrument Type: Reset Config File")
+                return False
+            self.sens_list = [j for (i, j) in self.lockin.sens_dict.items()]
+            self.time_constant_list = [j for (i, j) in self.lockin.time_const_dict.items()]
+            self.current_sens = self.lockin.Get_Sensitivity()
+            self.current_time_constant = self.lockin.Get_Time_Constant()
+            try:
+                self.sensitivity.set(self.current_sens)
+                self.sens_options["menu"].delete(0, "end")
+                for sens in self.sens_list:
+                    self.sens_options['menu'].add_command(label=sens, command=tk._setit(self.sensitivity, sens, self.switchSens))
+                # self.sens_options.config(command=self.switchSens)
+            except:
+                pass
+            try:
+                self.time_constant.set(self.current_time_constant)
+                self.time_constant_options["menu"].delete(0, "end")
+                for tc in self.time_constant_list:
+                    self.time_constant_options['menu'].add_command(label=tc, command=tk._setit(self.time_constant, tc, self.switchTC))
+                # self.time_constant_options.config(command=self.switchTC)
+            except:
+                pass
             return True
         except:
+            traceback.print_exc()
+            self.sens_list = ["None"]
+            self.time_constant_list = ["None"]
+            self.current_sens = self.sens_list[0]
+            self.current_time_constant = self.time_constant_list[0]
+            try:
+                self.sensitivity.set(self.current_sens)
+            except:
+                pass
+            try:
+                self.time_constant.set(self.current_time_constant)
+            except:
+                pass
             return False
     
     def set_signalgen(self, model, GPIB):
