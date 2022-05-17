@@ -25,6 +25,9 @@ import configparser
 import os
 import time
 
+import traceback
+import logging
+
 import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
@@ -54,8 +57,13 @@ class tkApp(tk.Tk):
             self.initConfig()
             
         # Read configurations using section and key to get the value
+        self.change_config(initial=True)
         self.config.read(self.config_directory+self.config_name)
         self.load_config(initial=True)
+        
+        self.init_logs()
+        
+        logging.info("Program Initialized")
         
         self.save_interval = 60 # in minutes
         
@@ -67,6 +75,7 @@ class tkApp(tk.Tk):
         graph_ratio = 1
         padding = (1-graph_size)/2*(self.win_zoom_inches["width"]/2)
         
+        # Two Graphs
         self.graph_1 = tk.Frame(self)
         self.graph_1.place(x="{}i".format(padding),y="0i")
         self.graph_2 = tk.Frame(self)
@@ -96,6 +105,7 @@ class tkApp(tk.Tk):
         self.canvas2.get_tk_widget().pack(in_=self.graph_2)
         self.canvas2.mpl_connect("key_press_event", self.on_key_press)
 
+        # Param Frames
         self.param_entry_frame = tk.Frame(self)
         self.param_entry_frame.place(x="{}i".format(1*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         self.param_label_frame = tk.Frame(self)
@@ -106,15 +116,18 @@ class tkApp(tk.Tk):
         self.param_label_frame_2 = tk.Frame(self)
         self.param_label_frame_2.place(x="{}i".format(5*self.scaling_factor["x"]), y="{}i".format(graph_size*self.win_zoom_inches["width"]/2*graph_ratio+0.75))
         
+        # Checkbox Frame
         self.checkbox_frame = tk.Frame(self)
         self.checkbox_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(0.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
         self.current_temp_label = tk.Label(master=self, text="Current Temp: ")
         self.current_temp_label.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.5+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
+        # Option Frame
         self.option_frame = tk.Frame(self)
         self.option_frame.place(x="{}i".format(self.win_zoom_inches["width"]/2+padding), y="{}i".format(1.0+graph_size*self.win_zoom_inches["width"]/2*graph_ratio))
         
+        # Tracking checkbox
         self.tracking_button = tk.Button(self.checkbox_frame, text="Update Tracking Range", padx=10, command=self.update_tracking_range)
         self.tracking_button.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
         self.tracking_label = tk.Label(self.checkbox_frame, text="Tracking Range: {:.2f}".format(self.tracking_range))
@@ -122,9 +135,7 @@ class tkApp(tk.Tk):
         self.tracking_entry = tk.Entry(self.checkbox_frame, width=5)
         self.tracking_entry.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
         
-        self.settings_frame = tk.Frame(self)
-        self.settings_frame.place(x="{}i".format(self.win_zoom_inches["width"]-1),  y="{}i".format(self.win_zoom_inches["height"]-9/16))
-        
+               
         # labels & Text Boxes
         self.label_list = []
         self.entry_list = []
@@ -146,9 +157,11 @@ class tkApp(tk.Tk):
                 self.entry_list[-1].pack(in_=self.param_entry_frame_2, pady=5)
 
         
+        # Update Params Button
         self.update_button = tk.Button(master=self, text="Update Params", command=self.update_sweep_params)
         self.update_button.pack(in_=self.param_entry_frame, pady=5)
         
+        # Checkbox bools
         self.fitBool = tk.IntVar()
         self.fitBool.set(int(self.config["Monitor Checkbox Settings"]["Fitting"]))
         self.fit_check = tk.Checkbutton(master=self, text="Fit", variable=self.fitBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
@@ -164,6 +177,7 @@ class tkApp(tk.Tk):
         self.track_check = tk.Checkbutton(master=self, text="Track", variable=self.trackBool, onvalue=1, offvalue=0, command=self.update_checkbox_config)
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
+        # Graph options
         self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
         
@@ -177,16 +191,26 @@ class tkApp(tk.Tk):
         self.whichGraph_2_Options = tk.OptionMenu(self, self.whichGraph_2, *self.graph_option_list, command=self.switchGraph)
         self.whichGraph_2_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(6*self.scaling_factor["y"]))
         
+        # Settings Frame
+        self.settings_frame = tk.Frame(self)
+        self.settings_frame.place(x="{}i".format(self.win_zoom_inches["width"]-2.5),  y="{}i".format(self.win_zoom_inches["height"]-9/16))
+
+        # Settings Menu Button
         self.settings_button = tk.Button(master=self, text="Settings", command=self.settingsWindow)
         self.settings_button.pack(in_=self.settings_frame, side=tk.RIGHT, padx=5, pady=5)
         
+        # Clear Graphs Button
+        self.clear_button = tk.Button(master=self, text="Save & Clear Graphs", command=self.clearData)
+        self.clear_button.pack(in_=self.settings_frame, side=tk.LEFT, padx=5, pady=5)
+        
+        # Start Button
         self.start_button = tk.Button(master=self, text="Start", bg='green', fg='white', height=2, width=9, command=self.start)
         self.start_button.place(x="{}i".format((self.win_zoom_inches["width"]/2-0.4)), y="{}i".format(8.5*self.scaling_factor["y"]))
         
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.update_idletasks()
-        self.update()
+        # self.update_idletasks()
+        # self.update()
 
     def on_closing(self):
         self.update_idletasks()
@@ -194,6 +218,7 @@ class tkApp(tk.Tk):
         if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.run = False
             self.TFdata.save_fits()
+            logging.info("Program Terminated")
             self.quit()
             self.destroy()
 
@@ -225,6 +250,9 @@ class tkApp(tk.Tk):
         
         self.config.add_section("Tracking Settings")
         self.config.set("Tracking Settings", "Range", "6")
+        
+        self.config.add_section("Logs Settings")
+        self.config.set("Logs Settings", "Log File Name", "TFMI")
         
         with open(self.config_directory+self.current_config, 'w') as output:
             self.config.write(output)
@@ -281,6 +309,19 @@ class tkApp(tk.Tk):
     def update_checkbox_config(self):
         self.updateConfig("Monitor Checkbox Settings", "Fitting", self.fitBool.get())
         self.updateConfig("Monitor Checkbox Settings", "Tracking", self.trackBool.get())
+        
+    def init_logs(self):
+        logging.basicConfig(filename='logs/'+self.config["Logs Settings"]["Log File Name"]+".log", 
+                            format='%(asctime)s :: %(levelname)s :: %(message)s', level=logging.INFO)
+        
+        fileh = logging.FileHandler('logs/'+self.config["Logs Settings"]["Log File Name"]+".log", 'a')
+        formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+        fileh.setFormatter(formatter)
+        
+        log = logging.getLogger()  # root logger
+        for hdlr in log.handlers[:]:  # remove all old handlers
+            log.removeHandler(hdlr)
+        log.addHandler(fileh) 
             
     def init_window_size(self):
         self.update_idletasks()
@@ -450,14 +491,18 @@ class tkApp(tk.Tk):
             self.TFdata.set_current_amp(float(self.current_amp_entry.get()))
             
                 
-    def change_config(self):
+    def change_config(self, initial=False):
         new_config_file = tk.filedialog.askopenfilename(initialdir=self.config_directory)
         # print(new_config_file, new_config_file.split('/')[-1])
         self.config_name = new_config_file.split('/')[-1]
         self.config.read(self.config_directory+self.config_name)
-        self.load_config()
-        self.load_settings_text()
+        self.init_logs()
+        self.load_config(initial)
         self.config_label.config(text=self.config_name)
+        if not initial:
+            self.load_settings_text()
+        
+
                 
     def update_sweep_params(self):
         old_params = self.params
@@ -482,7 +527,10 @@ class tkApp(tk.Tk):
                             print("Phase Not Set Properly")
                     self.updateConfig('Frequency Sweep Settings', key, self.params[key])
                     self.entry_list[idx].delete(0, 'end')
-                self.label_list[idx].config(text=key+": {}".format(self.params[key]))
+                if key == "Num Pts" or key == "Wait Time, ms":
+                    self.label_list[idx].config(text=key+": {:d}".format(int(self.params[key])))
+                else:
+                    self.label_list[idx].config(text=key+": {:.3f}".format(float(self.params[key])))
             except Exception as e:
                 print(e)
 
@@ -539,23 +587,22 @@ class tkApp(tk.Tk):
             self.tracking_range.delete(0, 'end')
     
 
-    def _quit(self):
-        self.update_idletasks()
-        self.update()
-        self.quit()     # stops mainloop
-        self.destroy()  # this is necessary on Windows to prevent
-                        # Fatal Python Error: PyEval_RestoreThread: NULL tstate
-        self.TFdata.save_fits()
     
     def tracking(self):
         resonance = self.TFdata.xfit[0]
         width = self.TFdata.xfit[2]
-        new_start = resonance-self.tracking_range*width
-        if new_start < 1:
-            new_start = 1
-        new_end = resonance+self.tracking_range*width
+        if resonance > self.params["Start Frequency"] and resonance < self.params["End Frequency"]:
+            new_start = resonance-self.tracking_range*width
+            new_end = resonance+self.tracking_range*width
+        else:
+            current_range = self.params["End Frequency"] - self.params["Start Frequency"]
+            new_start = self.params["Start Frequency"] - 0.5*current_range
+            new_end = self.params["End Frequency"] + 0.5*current_range
+        
         if new_end > 90E5:
-            new_end = 90E5
+                new_end = 90E5
+        if new_start < 1:
+                new_start = 1
         
         self.params["Start Frequency"] = new_start
         self.params["End Frequency"] = new_end
@@ -641,8 +688,15 @@ class tkApp(tk.Tk):
                 self.current_temp_label.config(text="Current Temp: {:.1f} uK".format(1e6*self.TFdata.T))
         except:
             pass
-                
         
+    def clearData(self):
+        self.run = False
+        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+        self.TFdata.daily_save()
+        self.TFdata.store_last_sweep([])
+        self.graph_fits()
+        self.graph_sweep()
+                
     def sweep(self):
         self.TFdata.reset_sweep()
         frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
@@ -695,6 +749,7 @@ class tkApp(tk.Tk):
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
+        logging.info("Started Sweeping")
         # Main Loop
         self.run = True
         while self.run:
@@ -704,11 +759,11 @@ class tkApp(tk.Tk):
                     self.TFdata.save_sweep()
                     if self.fitBool.get():
                         xflag = self.TFdata.fit_sweep()
+                        if self.trackBool.get():
+                                self.tracking()
                         if xflag in [1,2,3,4]:
                             self.update_temp_label()
                             self.TFdata.update_recent_temp_file()
-                            if self.trackBool.get():
-                                self.tracking()
                             if self.correctPhaseBool.get():
                                 self.phaseCorrection()
                         # if self.showGraph.get() == "Fit Details":
@@ -719,27 +774,39 @@ class tkApp(tk.Tk):
                             except:
                                 print("Unable to save figure")
                             self.TFdata.daily_save()
+                            logging.info("Fit Data Saved")
                         elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                             self.TFdata.save_fits()
                             self.TFdata.reset_save_time()
+                            logging.info("Fit Data Saved")
                         
                 
-            except Exception as e:
-                print(e)
+            except Exception as e1:
+                logging.warning(e1)
+                traceback.print_exc()
                 if self.run:
                     self.TFdata.save_fits()
                     self.run = False
                     try:
-                        self.quit()
-                        self.destroy()
-                    except Exception as e:
-                        print(e)
-                    
+                        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+                    except Exception as e2:
+                        logging.warning(e2)
+                        traceback.print_exc(file=open("logs/"+self.config["Logs Settings"]["Log File Name"]+'.txt', 'w'))
+            
         
     def stop(self):
         self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
         self.run = False
-
+        logging.info("Paused Sweeping")
+        
+    
+    def _quit(self):
+        self.update_idletasks()
+        self.update()
+        self.quit()     # stops mainloop
+        self.destroy()  # this is necessary on Windows to prevent
+                        # Fatal Python Error: PyEval_RestoreThread: NULL tstate
+        self.TFdata.save_fits()
         
 if __name__ == "__main__":
     if os.getcwd().split("\\")[-1] == "TF-Monitor-Interface":
