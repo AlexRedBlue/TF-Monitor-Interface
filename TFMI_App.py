@@ -229,7 +229,7 @@ class tkApp(tk.Tk):
         self.config.set('Frequency Sweep Settings', 'Phase, deg', '0')
         self.config.set('Frequency Sweep Settings', 'Num Pts', '100')
         self.config.set('Frequency Sweep Settings', 'Wait Time, ms', '1000')
-        self.config.set('Frequency Sweep Settings', 'Drive', '0.1')
+        self.config.set('Frequency Sweep Settings', 'Drive, V', '0.1')
         self.config.set('Frequency Sweep Settings', 'Current Amp', '10000')
         
         self.config.add_section("Instrument Settings")
@@ -263,7 +263,7 @@ class tkApp(tk.Tk):
         
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
                              save_folder=self.config["Monitor Save Settings"]["Save Folder"])
-        self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive"]))
+        self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive, V"]))
         self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
         
         NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
@@ -290,7 +290,7 @@ class tkApp(tk.Tk):
                         "Phase, deg": float(self.config["Frequency Sweep Settings"]["Phase, deg"]),
                         "Num Pts": int(self.config["Frequency Sweep Settings"]["Num Pts"]),
                         "Wait Time, ms": int(self.config["Frequency Sweep Settings"]["Wait Time, ms"]),
-                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive"])
+                        "Drive, V": float(self.config["Frequency Sweep Settings"]["Drive, V"])
                       }
         if not initial:
             self.update_sweep_params()
