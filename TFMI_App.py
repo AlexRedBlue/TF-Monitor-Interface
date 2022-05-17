@@ -358,6 +358,7 @@ class tkApp(tk.Tk):
             self.lockin.Set_Sensitivity(event)
             self.current_sens = event
         except:
+            traceback.print_exc()
             self.sensitivity.set(self.current_sens)
         
     def switchTC(self, event):

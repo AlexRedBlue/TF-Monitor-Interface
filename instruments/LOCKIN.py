@@ -58,7 +58,7 @@ class SR830:
         return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
     
     def Set_Sensitivity(self,sens):
-        self.inst.write("SENS %d" % format(self.sens_dict_inv[sens]))
+        self.inst.write("SENS %d" % self.sens_dict_inv[sens])
 
     def Get_Time_Constant(self):
         return self.time_const_dict[int(self.inst.query("OFLT?"))]
