@@ -477,7 +477,6 @@ class LI5640:
     
     def Get_Sensitivity(self):
         mode = int(self.instr.query("ISRC?"))
-        print(mode)
         if mode in [0,1]:
             return self.sens_dict[int(self.instr.query("VSEN?").rstrip())]
         elif mode in [2,3]:
