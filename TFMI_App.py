@@ -581,7 +581,7 @@ class tkApp(tk.Tk):
             else:
                 print("Invalid Lock-in Instrument Type: Reset Config File")
                 return False
-            self.sens_list = [j for (i, j) in self.lockin.sens_dict.items()]
+            self.sens_list = [j for (i, j) in self.lockin.Get_Sens_Dict().items()]
             self.time_constant_list = [j for (i, j) in self.lockin.time_const_dict.items()]
             self.current_sens = self.lockin.Get_Sensitivity()
             self.current_time_constant = self.lockin.Get_Time_Constant()

@@ -26,12 +26,12 @@ class SR830:
                  17:"1 mV",18:"2 mV",19:"5 mV",20:"10 mV",21:"20 mV",22:"50 mV",
                  23:"100 mV",24:"200 mV",25:"500 mV",26:"1 V"}
     sens_dict_inv = {v: k for k, v in sens_dict.items()}
-    current_sens_dict = {1:"5fA",2:"10fA",3:"20fA",4:"50fA",5:"100fA",
-                        6:"200fA",7:"500fA",8:"1pA",9:"2pA",10:"5pA",
-                        11:"10pA",12:"20pA",13:"50pA",14:"100pA",15:"200pA",
-                        16:"500pA",17:"1nA",18:"2nA",19:"5nA",20:"10nA",
-                        21:"20nA",22:"50nA",23:"100nA",24:"200nA",25:"500nA",
-                        26:"1uA"}
+    current_sens_dict = {1:"5 fA",2:"10 fA",3:"20 fA",4:"50 fA",5:"100 fA",
+                        6:"200 fA",7:"500 fA",8:"1 pA",9:"2 pA",10:"5 pA",
+                        11:"10 pA",12:"20 pA",13:"50 pA",14:"100 pA",15:"200 pA",
+                        16:"500 pA",17:"1 nA",18:"2 nA",19:"5 nA",20:"10 nA",
+                        21:"20 nA",22:"50 nA",23:"100 nA",24:"200 nA",25:"500 nA",
+                        26:"1 uA"}
     current_sens_dict_inv = invert_dict(current_sens_dict)
     time_const_dict = {0:"10 us",1:"30 us",2:"100 us",3:"300 us",4:"1 ms",5:"3 ms",
                        6:"10 ms",7:"30 ms",8:"100 ms",9:"300 ms",10:"1 s",11:"3 s",
@@ -57,11 +57,26 @@ class SR830:
     def Read_XY(self):
         return [float(s) for s in self.inst.query('SNAP? 1,2').rstrip().split(",")]
     
+    def Get_Sens_Dict(self):
+        mode = int(self.inst.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict
+        elif mode in [2,3]:
+            return self.current_sens_dict
+    
     def Get_Sensitivity(self):
-        return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        mode = int(self.inst.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        elif mode in [2,3]:
+            return self.current_sens_dict[int(self.inst.query("SENS?").rstrip())]
     
     def Set_Sensitivity(self,sens):
-        self.inst.write("SENS %d" % self.sens_dict_inv[sens])
+        mode = int(self.inst.query("ISRC?"))
+        if mode in [0,1]:
+            return self.inst.write("SENS %d" % self.sens_dict_inv[sens])
+        elif mode in [2,3]:
+            return self.inst.write("SENS %d" % self.current_sens_dict_inv[sens])
 
     def Get_Time_Constant(self):
         return self.time_const_dict[int(self.inst.query("OFLT?"))]
@@ -143,12 +158,12 @@ class SR844:
                  17:"1 mV",18:"2 mV",19:"5 mV",20:"10 mV",21:"20 mV",22:"50 mV",
                  23:"100 mV",24:"200 mV",25:"500 mV",26:"1 V"}
     sens_dict_inv = {v: k for k, v in sens_dict.items()}
-    current_sens_dict = {1:"5fA",2:"10fA",3:"20fA",4:"50fA",5:"100fA",
-                        6:"200fA",7:"500fA",8:"1pA",9:"2pA",10:"5pA",
-                        11:"10pA",12:"20pA",13:"50pA",14:"100pA",15:"200pA",
-                        16:"500pA",17:"1nA",18:"2nA",19:"5nA",20:"10nA",
-                        21:"20nA",22:"50nA",23:"100nA",24:"200nA",25:"500nA",
-                        26:"1uA"}
+    current_sens_dict = {1:"5 fA",2:"10 fA",3:"20 fA",4:"50 fA",5:"100 fA",
+                        6:"200 fA",7:"500 fA",8:"1 pA",9:"2 pA",10:"5 pA",
+                        11:"10 pA",12:"20 pA",13:"50 pA",14:"100 pA",15:"200 pA",
+                        16:"500 pA",17:"1 nA",18:"2 nA",19:"5 nA",20:"10 nA",
+                        21:"20 nA",22:"50 nA",23:"100 nA",24:"200 nA",25:"500 nA",
+                        26:"1 uA"}
     current_sens_dict_inv = invert_dict(current_sens_dict)
     time_const_dict = {0:"10 us",1:"30 us",2:"100 us",3:"300 us",4:"1 ms",5:"3 ms",
                        6:"10 ms",7:"30 ms",8:"100 ms",9:"300 ms",10:"1 s",11:"3 s",
@@ -170,11 +185,27 @@ class SR844:
     def Read_XY(self):
         return [float(s) for s in self.inst.query('SNAP? 1,2').rstrip().split(",")]
     
+    def Get_Sens_Dict(self):
+        mode = int(self.instr.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict
+        elif mode in [2,3]:
+            return self.current_sens_dict
+    
     def Get_Sensitivity(self):
-        return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        mode = int(self.inst.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        elif mode in [2,3]:
+            return self.current_sens_dict[int(self.inst.query("SENS?").rstrip())]
     
     def Set_Sensitivity(self,sens):
-        self.inst.write("SENS %d" % self.sens_dict_inv[sens])
+        mode = int(self.inst.query("ISRC?"))
+        if mode in [0,1]:
+            return self.inst.write("SENS %d" % self.sens_dict_inv[sens])
+        elif mode in [2,3]:
+            return self.inst.write("SENS %d" % self.current_sens_dict_inv[sens])
+        
     
     def Get_Time_Constant(self):
         return self.time_const_dict[int(self.inst.query("OFLT?"))]
@@ -262,14 +293,18 @@ class SR850:
         return [float(s) for s in self.inst.query('SNAP? 1,2').rstrip().split(",")]
     
     def Get_Sensitivity(self):
-        return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        mode = int(self.instr.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict[int(self.inst.query("SENS?").rstrip())]
+        elif mode in [2,3]:
+            return self.current_sens_dict[int(self.inst.query("SENS?").rstrip())]
     
-    def Set_Sensitivity(self, sens):
-        try:
-            self.inst.write("SENS %d" % self.sens_dict_inv[sens])
-        except:
-            sens = input("Enter a sensitvity in the form ### V")
-            self.Set_Sensitivity(sens)
+    def Set_Sensitivity(self,sens):
+        mode = int(self.instr.query("ISRC?"))
+        if mode in [0,1]:
+            return self.inst.write("SENS %d" % self.sens_dict_inv[sens])
+        elif mode in [2,3]:
+            return self.inst.write("SENS %d" % self.current_sens_dict_inv[sens])
     
     def Get_Time_Constant(self):
         return self.time_const_dict[int(self.inst.query("OFLT?"))]
@@ -328,24 +363,24 @@ class LI5640:
     coupling_dict_inv = {v:k for k,v in coupling_dict.items()}
     ground_dict = {0:"FLOAT",1:"GROUND"}
     ground_dict_inv = {v:k for k,v in ground_dict.items()}
-    sens_dict = {0:"2nV",1:"5nV",2:"10nV",3:"20nV",4:"50nV",
-                        5:"100nV",6:"200nV",7:"500nV",8:"1uV",9:"2uV",10:"5uV",
-                        11:"10uV",12:"20uV",13:"50uV",14:"100uV",15:"200uV",
-                        16:"500uV",17:"1mV",18:"2mV",19:"5mV",20:"10mV",
-                        21:"20mV",22:"50mV",23:"100mV",24:"200mV",25:"500mV",
-                        26:"1V"}
+    sens_dict = {0:"2 nV",1:"5 nV",2:"10 nV",3:"20 nV",4:"50 nV",
+                        5:"100 nV",6:"200 nV",7:"500 nV",8:"1 uV",9:"2 uV",10:"5 uV",
+                        11:"10 uV",12:"20 uV",13:"50 uV",14:"100 uV",15:"200 uV",
+                        16:"500 uV",17:"1 mV",18:"2 mV",19:"5 mV",20:"10 mV",
+                        21:"20 mV",22:"50 mV",23:"100 mV",24:"200 mV",25:"500 mV",
+                        26:"1 V"}
     sens_dict_inv = invert_dict(sens_dict)
-    current_sens_dict = {1:"5fA",2:"10fA",3:"20fA",4:"50fA",5:"100fA",
-                        6:"200fA",7:"500fA",8:"1pA",9:"2pA",10:"5pA",
-                        11:"10pA",12:"20pA",13:"50pA",14:"100pA",15:"200pA",
-                        16:"500pA",17:"1nA",18:"2nA",19:"5nA",20:"10nA",
-                        21:"20nA",22:"50nA",23:"100nA",24:"200nA",25:"500nA",
-                        26:"1uA"}
+    current_sens_dict = {1:"5 fA",2:"10 fA",3:"20 fA",4:"50 fA",5:"100 fA",
+                        6:"200 fA",7:"500 fA",8:"1 pA",9:"2 pA",10:"5 pA",
+                        11:"10 pA",12:"20 pA",13:"50 pA",14:"100 pA",15:"200 pA",
+                        16:"500 pA",17:"1 nA",18:"2 nA",19:"5 nA",20:"10 nA",
+                        21:"20 nA",22:"50 nA",23:"100 nA",24:"200 nA",25:"500 nA",
+                        26:"1 uA"}
     current_sens_dict_inv = invert_dict(current_sens_dict)
-    time_const_dict = {0:"10us",1:"30us",2:"100us",3:"300us",4:"1ms",5:"3ms",
-                       6:"10ms",7:"30ms",8:"100ms",9:"300ms",10:"1s",
-                       11:"3s",12:"10s",13:"30s",14:"100s",15:"300s",
-                       16:"1ks",17:"3ks",18:"10ks",19:"30ks"}
+    time_const_dict = {0:"10 us",1:"30 us",2:"100 us",3:"300 us",4:"1 ms",5:"3 ms",
+                       6:"10 ms",7:"30 ms",8:"100 ms",9:"300 ms",10:"1 s",
+                       11:"3 s",12:"10 s",13:"30 s",14:"100 s",15:"300 s",
+                       16:"1 ks",17:"3 ks",18:"10 ks",19:"30 ks"}
     time_const_dict_inv = invert_dict(time_const_dict)
     DSMP_dict = {0:"Trigger",
                  1:"0.0625 ms",2:"0.125 ms",3:"0.250 ms", 4:"0.500 ms", 5:"1 ms", 
@@ -361,6 +396,13 @@ class LI5640:
         self.ID = self.instr.query("*IDN?")
         self.sens = self.Get_Sensitivity()
     
+    def Get_Sens_Dict(self):
+        mode = int(self.instr.query("ISRC?"))
+        if mode in [0,1]:
+            return self.sens_dict
+        elif mode in [2,3]:
+            return self.current_sens_dict
+        
     def Get_Phase(self):
         return float(self.instr.query("PHAS?").rstrip())
     
@@ -434,16 +476,19 @@ class LI5640:
             self.Set_Ground(input('Please enter "FLOAT" or "GROUND"'))
     
     def Get_Sensitivity(self):
-        return self.sens_dict[int(self.instr.query("VSEN?").rstrip())]
+        mode = int(self.instr.query("ISRC?"))
+        print(mode)
+        if mode in [0,1]:
+            return self.sens_dict[int(self.instr.query("VSEN?").rstrip())]
+        elif mode in [2,3]:
+            return self.current_sens_dict[int(self.instr.query("ISEN?").rstrip())]
     
     def Set_Sensitivity(self,sens):
-        self.instr.write("VSEN %d" % self.sens_dict_inv[sens])
-    
-    def Get_Current_Sensitivity(self):
-        return self.current_sens_dict[int(self.instr.query("ISEN?").rstrip())]
-    
-    def Set_CurrentSensitivity(self,sens):
-        self.inst.write("ISEN %d" % self.current_sens_dict_inv[sens])
+        mode = int(self.instr.query("ISRC?"))
+        if mode in [0,1]:
+            return self.instr.write("VSEN %d" % self.sens_dict_inv[sens])
+        elif mode in [2,3]:
+            return self.instr.write("ISEN %d" % self.current_sens_dict_inv[sens])
     
     def Auto_Sensitivity(self):
         self.instr.write("ASEN")
