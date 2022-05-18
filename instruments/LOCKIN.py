@@ -5,6 +5,8 @@ Created on Wed Feb 10 15:54:07 2021
 @author: physics-svc-mkdata
 """
 import pyvisa
+import time
+import numpy as np
 
 def invert_dict(dict_in):
     return {v:k for k,v in dict_in.items()}
@@ -31,6 +33,7 @@ class SR830:
     time_const_dict_inv = {v: k for k, v in time_const_dict.items()}
     reserve_dict = {0:"High Reserve",1:"Normal",2:"Low Noise"}
     filter_slope_dict = {0:"6dB/oct",1:"12dB/oct",2:"18dB/oct",3:"24dB/oct"}
+    
     
     def __init__(self, GPIB_Addr):
         rm = pyvisa.ResourceManager()
@@ -343,6 +346,10 @@ class LI5640:
                        11:"3s",12:"10s",13:"30s",14:"100s",15:"300s",
                        16:"1ks",17:"3ks",18:"10ks",19:"30ks"}
     time_const_dict_inv = invert_dict(time_const_dict)
+    DSMP_dict = {0:"Trigger",
+                 1:"0.0625 ms",2:"0.125 ms",3:"0.250 ms", 4:"0.500 ms", 5:"1 ms", 
+                 6:"2 ms", 7:"5 ms", 8:"10 ms", 9:"20 ms", 10:"50 ms", 11:"100 ms", 
+                 12:"200 ms", 13:"500 ms", 14:"1 s", 15:"2 s", 16: "5 s", 17:"10 s", 18:"20 s"}
     
     
     def __init__(self, GPIB_ADDR):
@@ -447,8 +454,45 @@ class LI5640:
         Vx = float(data_str[0])
         Vy = float(data_str[1])
         return Vx, Vy
+    
+    def Set_Data_Memory_Type(self, num):
+        DMT_dict = {0:"DATA1",1:"DATA2",2:"DATA1, DATA2",3:"DATA2, AUX IN2",4:"DATA1, DATA2, FREQ",5:"DATA1, DATA2, AUX IN1, AUX IN2"}
+        self.instr.write("DTYP {:d}".format(num))
+        print(DMT_dict[num])
+    
+    def Set_DSMP(self, num):
+        self.instr.write("DSMP {:d}".format(num))
+        print(self.DSMP_dict[int(self.instr.query("DSMP?"))])
+        
+    def Set_Memory_Size(self, num):
+        self.instr.write("DSIZ {:d}".format(num))
+        print("Memory Size: {} K".format(2**(num+1)))
+        
+    def Set_Trigger(self, num):
+        # 0 Enable, 1 Disable
+        self.instr.write("TENB {:d}".format(num))
+        
+    def Store_Data(self, wait):
+        self.instr.write("STRT")
+        self.instr.write("*TRG")
+        time.sleep(wait)
+        self.instr.write("STOP")
+        
+    def Get_Stored_Data(self):
+        pts = int(self.instr.query("SPTS?"))
+        print(pts)
+        if pts != 0:
+            data = []
+            self.instr.write("DASC? 0,{:d}".format(pts))
+            for i in range(pts-1):
+                row = self.instr.read_ascii_values(container=np.array)
+                data.append(row)
+            # data = self.instr.query_binary_values("DBIN? 0,{:d}".format(pts), header_fmt='empty', datatype='f', data_points=pts)
+            return np.array(data, dtype=float)
+        else:
+            return 0
   
-import numpy as np
+
 
 class test_lockin:
     def __init__(self, GPIB_ADDR):

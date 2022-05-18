@@ -18,6 +18,12 @@ class AGILENT_SIGNAL_GEN():
         print(self.ID)
         return self.ID
     
+    def Output(self, num):
+        if num:
+            self.instr.write("OUTP ON")
+        else:
+            self.instr.write("OUTP OFF")
+    
     def Get_Waveform(self):
         return self.instr.query("SOUR1:APPL?")
     
