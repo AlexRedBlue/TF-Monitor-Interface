@@ -266,9 +266,10 @@ class tkApp(tk.Tk):
         self.config.add_section("Logs Settings")
         self.config.set("Logs Settings", "Log File Name", "TFMI")
         
-        with open(self.config_directory+self.current_config, 'w') as output:
+     
+        with open(self.config_directory+self.config_name, 'w') as output:
             self.config.write(output)
-    
+
     def load_config(self, initial=False):
         
         self.tracking_range = float(self.config["Tracking Settings"]["Range"])
