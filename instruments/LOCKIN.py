@@ -550,9 +550,23 @@ class LI5640:
 
 
 class test_lockin:
+    sens_dict = {1:"5 fA",2:"10 fA",3:"20 fA",4:"50 fA",5:"100 fA",
+                        6:"200 fA",7:"500 fA",8:"1 pA",9:"2 pA",10:"5 pA",
+                        11:"10 pA",12:"20 pA",13:"50 pA",14:"100 pA",15:"200 pA",
+                        16:"500 pA",17:"1 nA",18:"2 nA",19:"5 nA",20:"10 nA",
+                        21:"20 nA",22:"50 nA",23:"100 nA",24:"200 nA",25:"500 nA",
+                        26:"1 uA"}
+    sens_dict_inv = invert_dict(sens_dict)
+    time_const_dict = {0:"10 us",1:"30 us",2:"100 us",3:"300 us",4:"1 ms",5:"3 ms",
+                       6:"10 ms",7:"30 ms",8:"100 ms",9:"300 ms",10:"1 s",
+                       11:"3 s",12:"10 s",13:"30 s",14:"100 s",15:"300 s",
+                       16:"1 ks",17:"3 ks",18:"10 ks",19:"30 ks"}
+    time_const_dict_inv = invert_dict(time_const_dict)
+    
     def __init__(self, GPIB_ADDR):
         self.ID = "Test Lock-in"
         self.phase = 0
+        self.drive = 1
         self.sensitivity = 1
         self.cycle = 0
     
@@ -565,6 +579,18 @@ class test_lockin:
             self.cycle = 0
         return Vx, Vy
     
-    def Set_Phase(self,phase_deg):
+    def Get_Sens_Dict(self):
+        return self.sens_dict
+
+    def Set_Voltage(self, V):
+        self.drive = V
+    
+    def Get_Sensitivity(self):
+        return self.sens_dict[10]
+    
+    def Get_Time_Constant(self):
+        return self.time_const_dict[10]
+    
+    def Set_Phase(self, phase_deg):
         self.phase = phase_deg
     

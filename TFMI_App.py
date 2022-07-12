@@ -58,10 +58,10 @@ class tkApp(tk.Tk):
             
         # Read configurations using section and key to get the value
         self.change_config(initial=True)
-        self.config.read(self.config_directory+self.config_name)
-        self.load_config(initial=True)
+        # self.config.read(self.config_directory+self.config_name)
+        # self.load_config(initial=True)
         
-        self.init_logs()
+        # self.init_logs()
         
         logging.info("Program Initialized")
         
@@ -147,6 +147,17 @@ class tkApp(tk.Tk):
         self.tracking_entry = tk.Entry(self.checkbox_frame, width=5)
         self.tracking_entry.pack(in_=self.checkbox_frame, side=tk.RIGHT, padx=10)
         
+        
+        
+        # TODO
+        # Add Amplitude Tracking Box/Option
+        self.data_mode_list = ["Frequency Sweep", "Amplitude Tracking"]
+        
+        self.data_mode = tk.StringVar(self)
+        self.data_mode.set(self.data_mode_list[0]) # default value
+        self.data_mode_Options = tk.OptionMenu(self, self.data_mode, *self.data_mode_list, command=self.switchMode)
+        self.data_mode_Options.place(x="{}i".format((self.win_zoom_inches["width"]-1.5)), y="{}i".format((self.win_zoom_inches["height"]-1)))
+
                
         # labels & Text Boxes
         self.label_list = []
@@ -246,10 +257,10 @@ class tkApp(tk.Tk):
         
         self.config.add_section("Instrument Settings")
         self.config.set("Instrument Settings", "Lock-in Model", "LI 5640")
-        # self.config.set("Instrument Settings", "Lock-in Model", "Test")
+        # self.config.set("Instrument Settings", "Lock-in Model", "Testing")
         self.config.set("Instrument Settings", "Lock-in GPIB", "25")
         self.config.set("Instrument Settings", "Signal-Gen Model", "Keysight")
-        # self.config.set("Instrument Settings", "Signal-Gen Model", "Test")
+        # self.config.set("Instrument Settings", "Signal-Gen Model", "Testing")
         self.config.set("Instrument Settings", "Signal-Gen GPIB", "24")
         
         self.config.add_section("Monitor Save Settings")
@@ -281,14 +292,11 @@ class tkApp(tk.Tk):
         
         NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
         NewGenSet = self.set_signalgen(self.config["Instrument Settings"]["signal-gen model"], self.config["Instrument Settings"]["signal-gen gpib"])
-            
-        if NewLockinSet == False or NewGenSet == False:
-            if not NewLockinSet:
-                print("Something went wrong with Lock-in GPIB settings")
-            if not NewGenSet:
-                print("Something went wrong with Signal-Gen GPIB settings")
-            self.settingsWindow()
         
+        if not NewLockinSet:
+            print("Something went wrong with Lock-in GPIB settings")
+        if not NewGenSet:
+            print("Something went wrong with Signal-Gen GPIB settings")
         try:
             self.gen.Set_Voltage(float(self.config["Frequency Sweep Settings"]["Drive, V"]))
         except:
@@ -353,6 +361,9 @@ class tkApp(tk.Tk):
         self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
                                "y": self.screen_size_inches["height"]/default_screen_size["height"]}
      
+    def switchMode(self, event):
+        print(event)
+        
     def switchSens(self, event):
         try:
             # print(event)
@@ -524,14 +535,24 @@ class tkApp(tk.Tk):
                 
     def change_config(self, initial=False):
         new_config_file = tk.filedialog.askopenfilename(initialdir=self.config_directory)
-        # print(new_config_file, new_config_file.split('/')[-1])
-        self.config_name = new_config_file.split('/')[-1]
-        self.config.read(self.config_directory+self.config_name)
-        self.init_logs()
-        self.load_config(initial)
-        self.config_label.config(text=self.config_name)
-        if not initial:
-            self.load_settings_text()
+        if new_config_file != '':
+            # print(new_config_file, new_config_file.split('/')[-1])
+            self.config_name = new_config_file.split('/')[-1]
+            self.config.read(self.config_directory+self.config_name)
+            try:
+                self.init_logs()
+                self.load_config(initial)
+                self.config_label.config(text=self.config_name)
+                if not initial:
+                    self.load_settings_text()
+            except:
+                print("Something went wrong loading the config file.\nTry deleting Configs/TFMI_config.cfg and reloading.")
+                self.quit()
+                self.destroy()
+        else:
+            print("Config not selected")
+            self.quit()
+            self.destroy()
                 
     def update_sweep_params(self):
         old_params = self.params
@@ -585,6 +606,7 @@ class tkApp(tk.Tk):
             self.time_constant_list = [j for (i, j) in self.lockin.time_const_dict.items()]
             self.current_sens = self.lockin.Get_Sensitivity()
             self.current_time_constant = self.lockin.Get_Time_Constant()
+            print(self.lockin.Get_Sensitivity(), self.lockin.Get_Time_Constant())
             try:
                 self.sensitivity.set(self.current_sens)
                 self.sens_options["menu"].delete(0, "end")
@@ -681,6 +703,9 @@ class tkApp(tk.Tk):
         self.updateConfig('Frequency Sweep Settings', "Phase, deg", self.params['Phase, deg'])
         self.label_list[2].config(text = "Phase, deg: {:.2f}".format(self.params['Phase, deg']))
         
+    # TODO add amplitude tracking
+    # grey out unused boxes while running
+    
     
     def switchGraph(self, event):
         self.graph_fits() 
@@ -816,6 +841,9 @@ class tkApp(tk.Tk):
         logging.info("Started Sweeping")
         # Main Loop
         self.run = True
+        # TODO
+        # Add Amplitude tracking mode
+        # Make expandable for future modes
         while self.run:
             try:
                 sweep_finished = self.sweep()
