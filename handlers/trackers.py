@@ -320,11 +320,14 @@ class diode_tracker:
     def take_data(self):
         # TODO
         # Read data from multimeter
-        V = self.multimeter.Read_V()
         try:
-            T = self.Diode_Fit_Vec(np.abs(V))
+            V = self.multimeter.Read_V()
+            try:
+                T = self.Diode_Fit_Vec(np.abs(V))
+            except:
+                T = np.nan
         except:
-            T = np.nan
+            V = np.nan
         self.data.append([time.time(), V, T])
         try:
             self.update_temperature_file()
