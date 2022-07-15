@@ -7,6 +7,7 @@ Created on Mon Apr 11 13:49:03 2022
 
 import os
 import numpy as np
+import pandas as pd
 from tuning_fork import Lorentz_Fitting as LF
 from tuning_fork.TF_visc import Meas_Temp
 
@@ -30,7 +31,8 @@ class TFdata:
         self.reset_fits()
         self.reset_saved_fits()
         self.reset_save_time()
-
+        
+        
     def get_today(self):
         now = datetime.now()
         self.today = datetime(year=now.year, month=now.month, day=now.day)
@@ -124,3 +126,44 @@ class TFdata:
             np.savetxt(fname, np.array(self.sweep), header=self.sweep_header, delimiter='\t')
         else:
             np.savetxt(fname, np.array(self.sweep), delimiter='\t')
+            
+            
+class TF_Amp_Data:
+    def __init__(self, TF_name, save_folder):
+        self.current_working_dir = os.getcwd()
+        self.TF_name = TF_name
+        self.save_folder = save_folder
+        self.get_today()
+        self.set_drive(1)
+        self.set_current_amp(1)
+        self.amplitude_data = {
+            "time, s": [],
+            "amplitude, nA": [],
+            "frequency, hz": [],
+            "drive, V": [],
+            "current amplifier": []
+            }
+    
+    
+    def get_today(self):
+        now = datetime.now()
+        self.today = datetime(year=now.year, month=now.month, day=now.day)
+        self.timestamp_today = time.mktime(self.today.timetuple())
+        self.today = self.today.strftime("%Y-%m-%d")
+        
+    def set_drive(self, value):
+        self.drive = value
+        
+    def set_current_amp(self, value):
+        self.current_amp = value
+        
+    def append_data(self, time, amplitude, frequency):
+        self.amplitude_data["time, s"].append(time)
+        self.amplitude_data["amplitude, nA"].append(amplitude)
+        self.amplitude_data["frequency, hz"].append(frequency)
+        self.amplitude_data["drive, V"].append(self.drive)
+        self.amplitude_data["current amplifier"].append(self.current_amp)
+        
+    def save_data(self, fname):
+        if not os.path.exists(fname):
+            pd.DataFrame(self.amplitude_data).save_csv(fname, sep='\t', index=False)

@@ -156,7 +156,7 @@ class tkApp(tk.Tk):
         self.data_mode = tk.StringVar(self)
         self.data_mode.set(self.data_mode_list[0]) # default value
         self.data_mode_Options = tk.OptionMenu(self, self.data_mode, *self.data_mode_list, command=self.switchMode)
-        self.data_mode_Options.place(x="{}i".format((self.win_zoom_inches["width"]-1.5)), y="{}i".format((self.win_zoom_inches["height"]-1)))
+        self.data_mode_Options.place(x="{}i".format(self.win_zoom_inches["width"]-6), y="{}i".format(self.win_zoom_inches["height"]-1/2))
 
                
         # labels & Text Boxes
@@ -348,6 +348,8 @@ class tkApp(tk.Tk):
     def init_window_size(self):
         self.update_idletasks()
         self.default_dpi = 96 # 1080p monitors
+        # self.default_dpi = 288 # 4k monitors
+        
         default_screen_size = {"width":20, "height":11.25}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
@@ -360,6 +362,7 @@ class tkApp(tk.Tk):
                                 "height": self.win_zoom_size["y"]/self.default_dpi}
         self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
                                "y": self.screen_size_inches["height"]/default_screen_size["height"]}
+        
      
     def switchMode(self, event):
         print(event)
@@ -706,7 +709,6 @@ class tkApp(tk.Tk):
     # TODO add amplitude tracking
     # grey out unused boxes while running
     
-    
     def switchGraph(self, event):
         self.graph_fits() 
         self.update_idletasks()
@@ -846,6 +848,10 @@ class tkApp(tk.Tk):
         # Make expandable for future modes
         while self.run:
             try:
+                # TODO
+                # Add check for collection mode (sweep/amplitude/etc)
+                # For amplitude mode switch to sweep when outside bounds/resonance checks/errors
+                # Add check to display whether amplitude measurements are possible
                 sweep_finished = self.sweep()
                 if sweep_finished:
                     self.TFdata.save_sweep()
@@ -859,19 +865,23 @@ class tkApp(tk.Tk):
                             if self.correctPhaseBool.get():
                                 self.phaseCorrection()
                         # if self.showGraph.get() == "Fit Details":
+                        # TODO
+                        # need to update graphing for different modes
                         self.graph_fits()
                         if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
                             try:
                                 self.savegraph()
                             except:
                                 print("Unable to save figure")
+                            # TODO
+                            # need to add amplitude measurement mode to TFdata
+                            # probably better than separate handler
                             self.TFdata.daily_save()
                             logging.info("Fit Data Saved")
                         elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                             self.TFdata.save_fits()
                             self.TFdata.reset_save_time()
                             logging.info("Fit Data Saved")
-                        
                 
             except Exception as e1:
                 logging.warning(e1)
