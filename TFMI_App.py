@@ -32,7 +32,8 @@ import numpy as np
 from tuning_fork import Lorentz_Fitting as LF
 
 # TFdata Class
-from handlers.tuning_fork import TFdata
+from handlers.tuning_fork import TFdata, TF_Amp_Data
+from tuning_fork.Amplitude_Tracking import amplitude_tracker
 # Useful Functions
 from functions.info import close_win, ticks_to_hours, isStrInt, isStrFloat, phaseAdjust
 
@@ -286,11 +287,19 @@ class tkApp(tk.Tk):
         
         self.tracking_range = float(self.config["Tracking Settings"]["Range"])
         
+        # TF Sweep Data
         self.TFdata = TFdata(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
                              save_folder=self.config["Monitor Save Settings"]["Save Folder"])
         self.TFdata.set_drive(float(self.config["Frequency Sweep Settings"]["Drive, V"]))
         self.TFdata.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
         
+        # TF Amplitude Tracking Data
+        self.TF_Amp_Data = TF_Amp_Data(TF_name=self.config["Monitor Save Settings"]["Tuning Fork Name"], 
+                                       save_folder=self.config["Monitor Save Settings"]["Save Folder"])
+        self.TF_Amp_Data.set_drive(float(self.config["Frequency Sweep Settings"]["Drive, V"]))
+        self.TF_Amp_Data.set_current_amp(float(self.config["Frequency Sweep Settings"]["Current Amp"]))
+        
+        # Setup Instruments
         NewLockinSet = self.set_lockin(self.config["Instrument Settings"]["lock-in model"], self.config["Instrument Settings"]["lock-in gpib"])
         NewGenSet = self.set_signalgen(self.config["Instrument Settings"]["signal-gen model"], self.config["Instrument Settings"]["signal-gen gpib"])
         
@@ -366,7 +375,12 @@ class tkApp(tk.Tk):
         
      
     def switchMode(self, event):
-        print(event)
+        logging.info("collection mode switched to " + event)
+        if event == "Amplitude Tracking":
+            self.graph_amplitude()
+        elif event == "Frequency Sweep":
+            self.graph_fits()
+            self.graph_sweep()
         
     def switchSens(self, event):
         try:
@@ -522,10 +536,12 @@ class tkApp(tk.Tk):
         if self.Save_Folder_entry.get() != self.config["Monitor Save Settings"]["Save Folder"]:
             self.updateConfig("Monitor Save Settings", "Save Folder", self.Save_Folder_entry.get())
             self.TFdata.save_folder = self.Save_Folder_entry.get()
+            self.TF_Amp_Data.save_folder = self.Save_Folder_entry.get()
 
         if self.TF_savename.get() != self.config["Monitor Save Settings"]["Tuning Fork Name"]:
             self.updateConfig("Monitor Save Settings", "Tuning Fork Name", self.TF_savename.get())
             self.TFdata.TF_name = self.TF_savename.get()
+            self.TF_Amp_Data.TF_name = self.TF_savename.get()
 
         next_fit_name = self.TFdata.getfilename(self.TFdata.save_folder, "{}_fits_{}".format(self.TFdata.TF_name, self.TFdata.today)).replace(self.TFdata.current_working_dir,'')
         self.fit_Label.config(text="Next Fit File: \t\t"+next_fit_name)
@@ -767,11 +783,35 @@ class tkApp(tk.Tk):
         self.ax2.clear()
         self.ay2.clear()
         
-        self.ax.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Amplitude, nA"])
-        self.ay.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Frequency, Hz"])
+        # First Graph
+        self.ax.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["amplitude, nA"])
+        self.ay.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["frequency, hz"])
+        self.ax.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["amplitude, nA"])
+        self.ay.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["frequency, hz"])
+        self.ax.set_title("Amplitude Tracking")
+        self.ax.set_xlabel("Time")
+        self.ax.set_ylabel("amplitude, nA")
+        self.ay.set_ylabel("frequency, Hz")
         
-        self.ax2.plot(self.TFdata.fits["time, s"], self.TFdata.fits["temperature, K"])
-        self.ay2.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Frequency, Hz"])
+        # Second Graph
+        self.ax2.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["temperature, K"])
+        self.ay2.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["frequency, hz"])
+        self.ax2.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["temperature, K"])
+        self.ay2.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["frequency, hz"])
+        self.ax2.set_title("Temperature")
+        self.ax2.set_xlabel("Time")
+        self.ax2.set_ylabel("Temperature, K")
+        self.ay2.set_ylabel("frequency, Hz")
+        
+        try:
+            time0, time1 = self.TF_Amp_Data.data["time, s"][0], self.TF_Amp_Data.data["time, s"][-1]
+            ticks_to_hours(self.ay1, time0, time1)
+            ticks_to_hours(self.ay2, time0, time1)
+        except:
+            pass
+        
+        self.canvas.draw()
+        self.canvas2.draw()
         
         
         
@@ -860,6 +900,7 @@ class tkApp(tk.Tk):
         # Add Amplitude tracking mode
         # Make expandable for future modes
         while self.run:
+            # Frequency Sweeps
             if self.data_mode.get() == "Frequency Sweep":
                 try:
                     sweep_finished = self.sweep()
@@ -882,27 +923,62 @@ class tkApp(tk.Tk):
                                 except:
                                     print("Unable to save figure")
                                 self.TFdata.daily_save()
+                                # Add TF Amp data saving
                                 logging.info("Fit Data Saved")
                             elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
                                 self.TFdata.save_fits()
+                                # Add TF Amp data saving
                                 self.TFdata.reset_save_time()
-                                logging.info("Fit Data Saved")
-                            
-                    
+                                logging.info("Fit Data Saved")                    
                 except Exception as e1:
                     logging.warning(e1)
                     traceback.print_exc()
                     if self.run:
                         self.TFdata.save_fits()
+                        self.TF_Amp_Data.save_data()
                         self.run = False
                         try:
                             self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
                         except Exception as e2:
                             logging.warning(e2)
                             traceback.print_exc(file=open("logs/"+self.config["Logs Settings"]["Log File Name"]+'.txt', 'w'))
+            # Amplitude tracking
             elif self.data_mode.get() == "Amplitude Tracking":
-                self.wait_in_ms(self.params["Wait Time, ms"])
-                print("Amplitude Tracking is Work in Progress")
+                try:
+                    self.wait_in_ms(self.params["Wait Time, ms"])
+                    Vx, Vy = self.lockin.Read_XY()
+                    self.TF_Amp_Data.append_data(time.time(), np.sqrt(Vx**2 + Vy**2), self.gen.Get_Frequency())
+                    amp_tracking = amplitude_tracker(self.TF_Amp_Data.data["frequency, hz"][-1], self.TF_Amp_Data.data["amplitude, nA"][-1])
+                    if amp_tracking[0]:
+                        self.gen.Set_Frequency(amp_tracking[1])
+                    self.graph_amplitude()
+                    
+                    if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                        try:
+                            self.savegraph()
+                        except:
+                            print("Unable to save figure")
+                        self.TFdata.daily_save()
+                        self.TF_Amp_Data.daily_save()
+                        # Add TF Amp data saving
+                        logging.info("Fit Data Saved")
+                    elif (time.time()-self.TF_Amp_Data.last_save)/60 > self.save_interval:
+                        self.TF_Amp_Data.save_data()
+                        # Add TF Amp data saving
+                        self.TF_Amp_Data.reset_save_time()
+                        logging.info("Fit Data Saved")           
+                except Exception as e2:
+                    logging.warning(e2)
+                    traceback.print_exc()
+                    if self.run:
+                        self.TFdata.save_fits()
+                        self.TF_Amp_Data.save_data()
+                        self.run = False
+                        try:
+                            self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+                        except Exception as e2:
+                            logging.warning(e2)
+                            traceback.print_exc(file=open("logs/"+self.config["Logs Settings"]["Log File Name"]+'.txt', 'w'))
     
 
     def stop(self):

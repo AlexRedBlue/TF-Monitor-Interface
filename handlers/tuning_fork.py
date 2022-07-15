@@ -126,7 +126,8 @@ class TFdata:
             np.savetxt(fname, np.array(self.sweep), header=self.sweep_header, delimiter='\t')
         else:
             np.savetxt(fname, np.array(self.sweep), delimiter='\t')
-            
+
+from tuning_fork.Amplitude_Tracking import temperature
             
 class TF_Amp_Data:
     def __init__(self, TF_name, save_folder):
@@ -136,20 +137,46 @@ class TF_Amp_Data:
         self.get_today()
         self.set_drive(1)
         self.set_current_amp(1)
-        self.amplitude_data = {
+        self.reset_data()
+        self.reset_saved_data()
+        self.reset_save_time()
+        
+    def reset_data(self):
+        self.data = {
             "time, s": [],
-            "amplitude, nA": [],
             "frequency, hz": [],
+            "amplitude, nA": [],
+            "temperature, K": [],
             "drive, V": [],
             "current amplifier": []
             }
-    
+        
+    def reset_saved_data(self):
+        self.saved_data = {
+            "time, s": [],
+            "frequency, hz": [],
+            "amplitude, nA": [],
+            "temperature, K": [],
+            "drive, V": [],
+            "current amplifier": []
+            }
+        
+    def reset_save_time(self):
+        self.last_save = time.time()
     
     def get_today(self):
         now = datetime.now()
         self.today = datetime(year=now.year, month=now.month, day=now.day)
         self.timestamp_today = time.mktime(self.today.timetuple())
         self.today = self.today.strftime("%Y-%m-%d")
+        
+    def getfilename(self, directory, file_tag, num=0):
+        fname = self.current_working_dir+r"/data/{}/{}__{}.dat".format(directory, file_tag, num)
+        if os.path.isdir(self.current_working_dir+"/data/"+directory) == False:
+            os.makedirs(self.current_working_dir+"/data/"+directory)
+        if os.path.isfile(fname):
+            return self.getfilename(directory, file_tag, num+1)
+        return fname
         
     def set_drive(self, value):
         self.drive = value
@@ -158,12 +185,24 @@ class TF_Amp_Data:
         self.current_amp = value
         
     def append_data(self, time, amplitude, frequency):
-        self.amplitude_data["time, s"].append(time)
-        self.amplitude_data["amplitude, nA"].append(amplitude)
-        self.amplitude_data["frequency, hz"].append(frequency)
-        self.amplitude_data["drive, V"].append(self.drive)
-        self.amplitude_data["current amplifier"].append(self.current_amp)
+        self.data["time, s"].append(time)
+        self.data["amplitude, nA"].append(amplitude*1E9/self.current_amp)
+        self.data["frequency, hz"].append(frequency)
+        self.data["temperature, K"].append(temperature(amplitude))
+        self.data["drive, V"].append(self.drive)
+        self.data["current amplifier"].append(self.current_amp)
+    
+    def daily_save(self):
+        self.save_data()
+
+        self.reset_saved_data()
         
-    def save_data(self, fname):
-        if not os.path.exists(fname):
-            pd.DataFrame(self.amplitude_data).save_csv(fname, sep='\t', index=False)
+    def save_data(self):
+        fname = self.getfilename(self.save_folder+"/Amplitude_Tracking_{}".format(self.today), "{}_AT_{}".format(self.TF_name, self.today))
+        if len(self.data["time, s"]) > 0:
+            pd.DataFrame(self.data).to_csv(fname, sep='\t', index=False)
+        for key in self.saved_data:
+            self.saved_data[key] = self.saved_data[key] + self.data[key] 
+        self.reset_data()
+        self.reset_save_time()
+            
