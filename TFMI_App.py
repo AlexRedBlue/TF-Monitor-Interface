@@ -156,7 +156,7 @@ class tkApp(tk.Tk):
         self.data_mode = tk.StringVar(self)
         self.data_mode.set(self.data_mode_list[0]) # default value
         self.data_mode_Options = tk.OptionMenu(self, self.data_mode, *self.data_mode_list, command=self.switchMode)
-        self.data_mode_Options.place(x="{}i".format((self.win_zoom_inches["width"]-1.5)), y="{}i".format((self.win_zoom_inches["height"]-1)))
+        self.data_mode_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-1.5)), y="{}i".format((self.win_zoom_inches["height"]-1)))
 
                
         # labels & Text Boxes
@@ -758,6 +758,20 @@ class tkApp(tk.Tk):
         
         self.canvas2.draw()
         
+    def graph_amplitude(self):
+        self.ax.clear()
+        self.ay.clear()
+        self.ax2.clear()
+        self.ay2.clear()
+        
+        self.ax.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Amplitude, nA"])
+        self.ay.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Frequency, Hz"])
+        
+        self.ax2.plot(self.TFdata.fits["time, s"], self.TFdata.fits["temperature, K"])
+        self.ay2.plot(self.TFdata.fits["time, s"], self.TFdata.fits["Frequency, Hz"])
+        
+        
+        
     def update_temp_label(self):
         try:
             if self.TFdata.T > 100:
@@ -785,29 +799,27 @@ class tkApp(tk.Tk):
             self.TFdata.store_last_sweep([])
             self.graph_fits()
             self.graph_sweep()
-                
-    def sweep(self):
-        self.TFdata.reset_sweep()
-        frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
+            
+    def wait_in_ms(self, ms):
         update_frequency = 100 # in ms
-        update_time_left = 3*int(self.params["Wait Time, ms"])
-        self.gen.Set_Frequency(self.params["Start Frequency"])
+        update_time_left = int(ms)
         while update_time_left > 0:
             if update_time_left > update_frequency:
                 self.after(update_frequency, self.update())
             else:
                 self.after(update_time_left, self.update())
             update_time_left -= update_frequency
+            
+                
+    def sweep(self):
+        self.TFdata.reset_sweep()
+        frequencies = np.linspace(self.params["Start Frequency"], self.params["End Frequency"], self.params["Num Pts"])
+        self.gen.Set_Frequency(self.params["Start Frequency"])
+        self.wait_in_ms(3*int(self.params["Wait Time, ms"]))
         for idx, f in enumerate(frequencies):
             if self.run:
                 self.gen.Set_Frequency(f)
-                update_time_left = int(self.params["Wait Time, ms"])
-                while update_time_left > 0:
-                    if update_time_left > update_frequency:
-                        self.after(update_frequency, self.update())
-                    else:
-                        self.after(update_time_left, self.update())
-                    update_time_left -= update_frequency
+                self.wait_in_ms(self.params["Wait Time, ms"])
                 Vx, Vy = self.lockin.Read_XY()
                 self.TFdata.append_sweep([time.time(), f, Vx, Vy, self.TFdata.drive, self.TFdata.current_amp])
                 # if self.showGraph.get() == "Frequency Sweep":
@@ -845,46 +857,50 @@ class tkApp(tk.Tk):
         # Add Amplitude tracking mode
         # Make expandable for future modes
         while self.run:
-            try:
-                sweep_finished = self.sweep()
-                if sweep_finished:
-                    self.TFdata.save_sweep()
-                    if self.fitBool.get():
-                        xflag = self.TFdata.fit_sweep()
-                        if self.trackBool.get():
-                                self.tracking()
-                        if xflag in [1,2,3,4]:
-                            self.update_temp_label()
-                            self.TFdata.update_recent_temp_file()
-                            if self.correctPhaseBool.get():
-                                self.phaseCorrection()
-                        # if self.showGraph.get() == "Fit Details":
-                        self.graph_fits()
-                        if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
-                            try:
-                                self.savegraph()
-                            except:
-                                print("Unable to save figure")
-                            self.TFdata.daily_save()
-                            logging.info("Fit Data Saved")
-                        elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
-                            self.TFdata.save_fits()
-                            self.TFdata.reset_save_time()
-                            logging.info("Fit Data Saved")
-                        
-                
-            except Exception as e1:
-                logging.warning(e1)
-                traceback.print_exc()
-                if self.run:
-                    self.TFdata.save_fits()
-                    self.run = False
-                    try:
-                        self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
-                    except Exception as e2:
-                        logging.warning(e2)
-                        traceback.print_exc(file=open("logs/"+self.config["Logs Settings"]["Log File Name"]+'.txt', 'w'))
-            
+            if self.data_mode.get() == "Frequency Sweep":
+                try:
+                    sweep_finished = self.sweep()
+                    if sweep_finished:
+                        self.TFdata.save_sweep()
+                        if self.fitBool.get():
+                            xflag = self.TFdata.fit_sweep()
+                            if self.trackBool.get():
+                                    self.tracking()
+                            if xflag in [1,2,3,4]:
+                                self.update_temp_label()
+                                self.TFdata.update_recent_temp_file()
+                                if self.correctPhaseBool.get():
+                                    self.phaseCorrection()
+                            # if self.showGraph.get() == "Fit Details":
+                            self.graph_fits()
+                            if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+                                try:
+                                    self.savegraph()
+                                except:
+                                    print("Unable to save figure")
+                                self.TFdata.daily_save()
+                                logging.info("Fit Data Saved")
+                            elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+                                self.TFdata.save_fits()
+                                self.TFdata.reset_save_time()
+                                logging.info("Fit Data Saved")
+                            
+                    
+                except Exception as e1:
+                    logging.warning(e1)
+                    traceback.print_exc()
+                    if self.run:
+                        self.TFdata.save_fits()
+                        self.run = False
+                        try:
+                            self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
+                        except Exception as e2:
+                            logging.warning(e2)
+                            traceback.print_exc(file=open("logs/"+self.config["Logs Settings"]["Log File Name"]+'.txt', 'w'))
+            elif self.data_mode.get() == "Amplitude Tracking":
+                self.wait_in_ms(self.params["Wait Time, ms"])
+                print("Amplitude Tracking is Work in Progress")
+    
         
     def stop(self):
         self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)

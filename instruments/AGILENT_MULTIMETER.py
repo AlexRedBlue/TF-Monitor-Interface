@@ -6,6 +6,7 @@ Created on Wed Jun 30 16:06:46 2021
 """
 
 import pyvisa
+import numpy as np
 
 class AGILENT_MULTIMETER:
     def __init__(self, GPIB_ADDR):
@@ -19,4 +20,7 @@ class AGILENT_MULTIMETER:
         return self.ID
     
     def Read_V(self):
-        return float(self.instr.query("READ?"))
+        try:
+            return float(self.instr.query("READ?"))
+        except:
+            return np.nan
