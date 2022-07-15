@@ -156,7 +156,8 @@ class tkApp(tk.Tk):
         self.data_mode = tk.StringVar(self)
         self.data_mode.set(self.data_mode_list[0]) # default value
         self.data_mode_Options = tk.OptionMenu(self, self.data_mode, *self.data_mode_list, command=self.switchMode)
-        self.data_mode_Options.place(x="{}i".format((self.win_zoom_inches["width"]/2-1.5)), y="{}i".format((self.win_zoom_inches["height"]-1)))
+        self.data_mode_Options.place(x="{}i".format(self.win_zoom_inches["width"]-6), y="{}i".format(self.win_zoom_inches["height"]-1/2))
+
 
                
         # labels & Text Boxes
@@ -348,6 +349,8 @@ class tkApp(tk.Tk):
     def init_window_size(self):
         self.update_idletasks()
         self.default_dpi = 96 # 1080p monitors
+        # self.default_dpi = 288 # 4k monitors
+        
         default_screen_size = {"width":20, "height":11.25}
         self.screen_ratio = {"width": 16, "height": 9}
         self.screen_size = {"x":self.winfo_screenwidth(), "y":self.winfo_screenheight()}
@@ -360,6 +363,7 @@ class tkApp(tk.Tk):
                                 "height": self.win_zoom_size["y"]/self.default_dpi}
         self.scaling_factor = {"x": self.screen_size_inches["width"]/default_screen_size["width"],
                                "y": self.screen_size_inches["height"]/default_screen_size["height"]}
+        
      
     def switchMode(self, event):
         print(event)
@@ -706,7 +710,6 @@ class tkApp(tk.Tk):
     # TODO add amplitude tracking
     # grey out unused boxes while running
     
-    
     def switchGraph(self, event):
         self.graph_fits() 
         self.update_idletasks()
@@ -901,7 +904,7 @@ class tkApp(tk.Tk):
                 self.wait_in_ms(self.params["Wait Time, ms"])
                 print("Amplitude Tracking is Work in Progress")
     
-        
+
     def stop(self):
         self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
         self.run = False
