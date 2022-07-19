@@ -51,12 +51,6 @@ class TFdata:
         
     def reset_save_time(self):
         self.last_save = time.time()
-        if self.saved_fits.ndim > 1:
-            self.saved_fits = np.concatenate((self.saved_fits, np.array(self.fits)))
-        else:
-            self.saved_fits = np.array(self.fits)
-        self.reset_fits()
-
         
     def reset_fits(self):
         self.fits = []
@@ -101,8 +95,6 @@ class TFdata:
                 return 0
         else:
             return 0
-        
-        
         
     def getfilename(self, directory, file_tag, num=0):
         fname = self.current_working_dir+r"/data/{}/{}__{}.dat".format(directory, file_tag, num)
