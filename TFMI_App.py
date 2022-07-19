@@ -242,7 +242,7 @@ class tkApp(tk.Tk):
         self.update()
         if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.run = False
-            self.TFdata.save_fits()
+            self.save_data()
             logging.info("Program Terminated")
             self.quit()
             self.destroy()
@@ -805,7 +805,7 @@ class tkApp(tk.Tk):
         
         try:
             time0, time1 = self.TF_Amp_Data.data["time, s"][0], self.TF_Amp_Data.data["time, s"][-1]
-            ticks_to_hours(self.ay1, time0, time1)
+            ticks_to_hours(self.ay, time0, time1)
             ticks_to_hours(self.ay2, time0, time1)
         except:
             pass
@@ -875,6 +875,22 @@ class tkApp(tk.Tk):
                 return False
         return True
     
+    def full_sweep(self):
+        sweep_finished = self.sweep()
+        if sweep_finished:
+            self.TFdata.save_sweep()
+            if self.fitBool.get():
+                xflag = self.TFdata.fit_sweep()
+                if self.trackBool.get():
+                    self.tracking()
+                if xflag in [1,2,3,4]:
+                    self.update_temp_label()
+                    self.TFdata.update_recent_temp_file()
+                    if self.correctPhaseBool.get():
+                        self.phaseCorrection()
+                    return True    
+        return False
+    
     def savegraph(self, num=0):
         fname = "data/{}/figures/{}_{}__{}".format(self.config["Monitor Save Settings"]["Save Folder"], 
                                                self.config["Monitor Save Settings"]["Tuning Fork Name"], 
@@ -921,7 +937,6 @@ class tkApp(tk.Tk):
             try:
                 self.TF_Amp_Data.daily_save()
                 logging.info("Daily TF_Amp_Data Save Success")
-                self.TF_Amp_Data.reset_save_time()
             except:
                 logging.warning("Daily TF_Amp_Data Save Failure")
 
@@ -937,21 +952,9 @@ class tkApp(tk.Tk):
             # Frequency Sweeps
             if self.data_mode.get() == "Frequency Sweep":
                 try:
-                    sweep_finished = self.sweep()
-                    if sweep_finished:
-                        self.TFdata.save_sweep()
-                        if self.fitBool.get():
-                            xflag = self.TFdata.fit_sweep()
-                            if self.trackBool.get():
-                                self.tracking()
-                            if xflag in [1,2,3,4]:
-                                self.update_temp_label()
-                                self.TFdata.update_recent_temp_file()
-                                if self.correctPhaseBool.get():
-                                    self.phaseCorrection()
-                            # if self.showGraph.get() == "Fit Details":
-                            self.graph_fits()
-                            self.save_data()                  
+                    good_sweep = self.full_sweep()
+                    self.graph_fits()
+                    self.save_data()                  
                 except Exception as e1:
                     logging.warning(e1)
                     traceback.print_exc()
@@ -967,14 +970,22 @@ class tkApp(tk.Tk):
             # Amplitude tracking
             elif self.data_mode.get() == "Amplitude Tracking":
                 try:
-                    self.wait_in_ms(self.params["Wait Time, ms"])
-                    Vx, Vy = self.lockin.Read_XY()
-                    self.TF_Amp_Data.append_data(time.time(), np.sqrt(Vx**2 + Vy**2), self.gen.Get_Frequency())
-                    amp_tracking = amplitude_tracker(self.TF_Amp_Data.data["frequency, hz"][-1], self.TF_Amp_Data.data["amplitude, nA"][-1])
-                    if amp_tracking[0]:
-                        self.gen.Set_Frequency(amp_tracking[1])
-                    self.graph_amplitude()
-                    self.save_data()      
+                    if time.time() - self.TF_Amp_Data.last_sweep_time < 10*60:
+                        self.wait_in_ms(self.params["Wait Time, ms"])
+                        Vx, Vy = self.lockin.Read_XY()
+                        self.TF_Amp_Data.append_data(time.time(), np.sqrt(Vx**2 + Vy**2), self.gen.Get_Frequency())
+                        amp_tracking = amplitude_tracker(self.TF_Amp_Data.data["frequency, hz"][-1], self.TF_Amp_Data.data["amplitude, nA"][-1])
+                        if amp_tracking[0]:
+                            self.gen.Set_Frequency(amp_tracking[1])
+                        self.graph_amplitude()
+                    else:
+                        good_sweep = self.full_sweep()
+                        if good_sweep:
+                            self.gen.Set_Frequency(self.TFdata.fits[-1][4])
+                            self.TF_Amp_Data.reset_sweep_time()
+                        else:
+                            self.graph_fits()
+                    self.save_data()
                 except Exception as e2:
                     logging.warning(e2)
                     traceback.print_exc()

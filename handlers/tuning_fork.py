@@ -121,12 +121,15 @@ class TFdata:
             pass
         
     def save_fits(self):
-        if np.array(self.fits).ndim > 1:
+        if np.asarray(self.fits).ndim > 1:
             fname = self.getfilename(self.save_folder+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
             if self.header is not None:
-                np.savetxt(fname, np.array(self.fits), header=self.header, delimiter='\t')
+                np.savetxt(fname, np.asarray(self.fits), header=self.header, delimiter='\t')
             else:
-                np.savetxt(fname, np.array(self.fits), delimiter='\t')
+                np.savetxt(fname, np.asarray(self.fits), delimiter='\t')
+            self.saved_fits = np.concatenate((self.saved_fits, np.asarray(self.fits)), axis=0)
+            self.reset_fits()
+            self.reset_save_time()
             
     def save_sweep(self):
         fname = self.getfilename(self.save_folder+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
@@ -143,6 +146,7 @@ class TF_Amp_Data:
         self.TF_name = TF_name
         self.save_folder = save_folder
         self.get_today()
+        self.reset_sweep_time()
         self.set_drive(1)
         self.set_current_amp(1)
         self.reset_data()
@@ -168,6 +172,9 @@ class TF_Amp_Data:
             "drive, V": [],
             "current amplifier": []
             }
+        
+    def reset_sweep_time(self):
+        self.last_sweep_time = time.time()
         
     def reset_save_time(self):
         self.last_save = time.time()
@@ -202,8 +209,9 @@ class TF_Amp_Data:
     
     def daily_save(self):
         self.save_data()
-
         self.reset_saved_data()
+        self.reset_save_time()
+        self.get_today()
         
     def save_data(self):
         fname = self.getfilename(self.save_folder+"/Amplitude_Tracking_{}".format(self.today), "{}_AT_{}".format(self.TF_name, self.today))
