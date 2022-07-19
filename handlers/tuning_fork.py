@@ -20,6 +20,7 @@ class TFdata:
         self.TF_name = TF_name
         self.save_folder = save_folder
         self.get_today()
+        self.frequency_limit = 32600
         self.set_drive(1)
         self.set_current_amp(1)
         self.store_last_sweep([])
@@ -91,10 +92,16 @@ class TFdata:
             self.xfit[0], self.xfit[2] = np.abs(self.xfit[0]), np.abs(self.xfit[2])
             self.yfit, yflag = LF.Lorentz_Fit_Y_quad(self.sweep[:, 1], self.sweep[:, 3], guess)
             self.yfit[0], self.yfit[2] = np.abs(self.yfit[0]), np.abs(self.yfit[2])
-        if xflag in [1,2,3,4]:
-            self.T = Meas_Temp(width=self.xfit[2], frequency=self.xfit[0])
-            self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
-        return xflag
+            
+            if xflag in [1,2,3,4]:
+                self.T = Meas_Temp(width=self.xfit[2], frequency=self.xfit[0])
+                self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
+                return xflag
+            else:
+                return 0
+        else:
+            return 0
+        
         
         
     def getfilename(self, directory, file_tag, num=0):
@@ -108,7 +115,8 @@ class TFdata:
     def update_recent_temp_file(self):
         file_loc = r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\TF_Temperature.dat"
         try:
-            np.savetxt(file_loc, np.array([self.fits[-1][0], self.fits[-1][3]]), delimiter='\t', header='Time, s\tTemperature, K')
+            if self.TFdata.fits[-1][4] > self.frequency_limit:
+                np.savetxt(file_loc, np.array([self.fits[-1][0], self.fits[-1][3]]), delimiter='\t', header='Time, s\tTemperature, K')
         except:
             pass
         

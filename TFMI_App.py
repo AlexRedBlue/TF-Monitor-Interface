@@ -817,7 +817,9 @@ class tkApp(tk.Tk):
         
     def update_temp_label(self):
         try:
-            if self.TFdata.T > 100:
+            if self.TFdata.fits[-1][4] > self.TFdata.frequency_limit:
+                self.current_temp_label.config(text="Current Temp: Outside Limits")
+            elif self.TFdata.T > 100:
                 self.current_temp_label.config(text="Current Temp: {:.1f} K".format(self.TFdata.T))
             elif self.TFdata.T > 10:
                 self.current_temp_label.config(text="Current Temp: {:.2f} K".format(self.TFdata.T))
@@ -890,6 +892,38 @@ class tkApp(tk.Tk):
                 print(folders[0]+'/'+folders[1], "save directory doesnt exist")
         else:
             self.savegraph(num=num+1)
+            
+    def save_data(self):
+        if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+            try:
+                self.TFdata.save_fits()
+                logging.info("Hourly Fit Data Save Success")
+            except:
+                logging.warning("Hourly Fit Data Save Failure")
+                self.TFdata.reset_save_time()
+            try:
+                self.TF_Amp_Data.save_data()
+                logging.info("Hourly TF_Amp_Data Save Success")
+            except:
+                logging.warning("Hourly TF_Amp_Data Save Failure")
+                self.TF_Amp_Data.reset_save_time()
+        elif (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+            try:
+                self.savegraph()
+            except:
+                print("Unable to save figure")
+            try:
+                self.TFdata.daily_save()
+                logging.info("Daily Fit Data Save Success")
+            except:
+                logging.warning("Daily Fit Data Save Failure")
+                self.TFdata.get_today()
+            try:
+                self.TF_Amp_Data.daily_save()
+                logging.info("Daily TF_Amp_Data Save Success")
+                self.TF_Amp_Data.reset_save_time()
+            except:
+                logging.warning("Daily TF_Amp_Data Save Failure")
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
@@ -909,7 +943,7 @@ class tkApp(tk.Tk):
                         if self.fitBool.get():
                             xflag = self.TFdata.fit_sweep()
                             if self.trackBool.get():
-                                    self.tracking()
+                                self.tracking()
                             if xflag in [1,2,3,4]:
                                 self.update_temp_label()
                                 self.TFdata.update_recent_temp_file()
@@ -917,19 +951,7 @@ class tkApp(tk.Tk):
                                     self.phaseCorrection()
                             # if self.showGraph.get() == "Fit Details":
                             self.graph_fits()
-                            if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
-                                try:
-                                    self.savegraph()
-                                except:
-                                    print("Unable to save figure")
-                                self.TFdata.daily_save()
-                                # Add TF Amp data saving
-                                logging.info("Fit Data Saved")
-                            elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
-                                self.TFdata.save_fits()
-                                # Add TF Amp data saving
-                                self.TFdata.reset_save_time()
-                                logging.info("Fit Data Saved")                    
+                            self.save_data()                  
                 except Exception as e1:
                     logging.warning(e1)
                     traceback.print_exc()
@@ -952,21 +974,7 @@ class tkApp(tk.Tk):
                     if amp_tracking[0]:
                         self.gen.Set_Frequency(amp_tracking[1])
                     self.graph_amplitude()
-                    
-                    if (time.time()-self.TFdata.timestamp_today) > 24*60*60:
-                        try:
-                            self.savegraph()
-                        except:
-                            print("Unable to save figure")
-                        self.TFdata.daily_save()
-                        self.TF_Amp_Data.daily_save()
-                        # Add TF Amp data saving
-                        logging.info("Fit Data Saved")
-                    elif (time.time()-self.TF_Amp_Data.last_save)/60 > self.save_interval:
-                        self.TF_Amp_Data.save_data()
-                        # Add TF Amp data saving
-                        self.TF_Amp_Data.reset_save_time()
-                        logging.info("Fit Data Saved")           
+                    self.save_data()      
                 except Exception as e2:
                     logging.warning(e2)
                     traceback.print_exc()

@@ -35,8 +35,8 @@ class AGILENT_SIGNAL_GEN():
         return float(self.instr.query("SOUR1:VOLT?"))
     
     def Set_Voltage(self,voltage):
-        # Vrms used is 1/2 the peak to peak, so we divide by 2
-        command_str = "SOUR1:VOLT {:.4f} VRMS".format(voltage/2)
+        # P2P is 2*sqrt(2) Vrms
+        command_str = "SOUR1:VOLT {:.4f} VRMS".format(voltage)
         self.instr.write(command_str)
         
     def Get_Frequency(self):
