@@ -17,11 +17,13 @@ polynomials = {}
 for column in tracking_poly_coeffs.columns:
     polynomials[column] = np.poly1d(tracking_poly_coeffs[column])
     
-def amplitude_tracker(frequency, current):
+def amplitude_tracker(frequency, current, drive):
+    
+    # current normalized to 25 mV drive
+    current = current/drive*0.025
     
     # check if current is between 1 nA and 4 nA
-    current = current*1E-9
-    if current > 1 and current < 4:
+    if current > 1 and current < 7:
         # TODO
         # Call this function in main program
         # Implement toggle for Amplitude Tracking
@@ -36,9 +38,18 @@ def amplitude_tracker(frequency, current):
         
         return False, frequency
     
-def temperature(current):
+def temperature(current, drive):
+    
+    # current normalized to 25 mV drive
+    current = current/drive*0.025
     # current in nA
-    if current > 1 and current < 4:
-        return polynomials["T vs I"](current*1E-9)
+    if current > 1 and current < 7:
+        return polynomials["T vs I"](current)
     else:
         return np.nan
+    
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    c = np.linspace(1, 7, 100)
+    plt.figure()
+    plt.plot(c, 1e3*np.vectorize(temperature)(c))

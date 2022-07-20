@@ -203,8 +203,12 @@ class tkApp(tk.Tk):
         self.track_check.pack(in_=self.checkbox_frame, side=tk.LEFT, padx=5, pady=5)
         
         # Graph options
-        self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        # self.graph_option_list = ["Temperature", "Resonance", "Amplitude", "Width", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_option_list = ["Temperature, K", *self.TFdata.Vx_names]
         self.graph_labels      = ["T, K", "$f_0$, hz", "I, nA", "$\\Delta f$, hz", "Phase", "Bgd_0", "Bgd_1", "Bgd_2"]
+        self.graph_label_dict = {}
+        for i, key in enumerate(self.graph_option_list):
+            self.graph_label_dict[key] = self.graph_labels[i]
         
         self.whichGraph_1 = tk.StringVar(self)
         self.whichGraph_1.set(self.graph_option_list[3]) # default value
@@ -242,7 +246,7 @@ class tkApp(tk.Tk):
         self.update()
         if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.run = False
-            self.save_data()
+            self.save_data(ForceDaily=True)
             logging.info("Program Terminated")
             self.quit()
             self.destroy()
@@ -727,9 +731,23 @@ class tkApp(tk.Tk):
     # grey out unused boxes while running
     
     def switchGraph(self, event):
-        self.graph_fits() 
+        self.graph_data() 
         self.update_idletasks()
         self.update()
+
+    def graph_data(self):
+        if self.data_mode.get() == "Frequency Sweep":
+            try:
+                self.graph_sweep()
+            except:
+                print("Unable to Graph Sweep")
+            try:
+                self.graph_fits_2()
+            except Exception as e:
+                print("new_graphing not working due to ", e)
+                self.graph_fits()
+        elif self.data_mode.get() == "Amplitude Tracking":
+            self.graph_amplitude()
 
     def graph_sweep(self):
         self.ax.clear()
@@ -771,9 +789,32 @@ class tkApp(tk.Tk):
             ticks_to_hours(self.ay2, time0, time1)
           
         self.ax2.set_title("Fit Values")
-        self.ax2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_1.get())])
-        self.ay2.set_ylabel(self.graph_labels[self.graph_option_list.index(self.whichGraph_2.get())])
-        self.ay2.set_xlabel("time")
+        self.ax2.set_ylabel(self.graph_label_dict[self.whichGraph_1.get()])
+        self.ay2.set_ylabel(self.graph_label_dict[self.whichGraph_2.get()])
+        self.ay2.set_xlabel("Time")
+        
+        self.canvas2.draw()
+        
+    def graph_fits_2(self):
+        self.ax2.clear()
+        self.ay2.clear()
+        
+        # Second Graph
+        self.ax2.plot(self.TFdata.saved_fit_data["Time, s"], self.TFdata.saved_fit_data[self.whichGraph_1.get()])
+        self.ay2.plot(self.TFdata.saved_fit_data["Time, s"], self.TFdata.saved_fit_data[self.whichGraph_1.get()])
+        self.ax2.plot(self.TFdata.fit_data["Time, s"], self.TFdata.fit_data[self.whichGraph_2.get()])
+        self.ay2.plot(self.TFdata.fit_data["Time, s"], self.TFdata.fit_data[self.whichGraph_2.get()])
+        self.ax2.set_title("Fit Values")
+        self.ax2.set_xlabel("Time")
+        self.ax2.set_ylabel(self.graph_label_dict[self.whichGraph_1.get()])
+        self.ay2.set_ylabel(self.graph_label_dict[self.whichGraph_2.get()])
+        
+        try:
+            total_time = self.TFdata.saved_fit_data["Time, s"] + self.TFdata.fit_data["Time, s"]
+            time0, time1 = total_time[0], total_time[-1]
+            ticks_to_hours(self.ay2, time0, time1)
+        except:
+            pass
         
         self.canvas2.draw()
         
@@ -784,27 +825,28 @@ class tkApp(tk.Tk):
         self.ay2.clear()
         
         # First Graph
-        self.ax.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["amplitude, nA"])
-        self.ay.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["frequency, hz"])
-        self.ax.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["amplitude, nA"])
-        self.ay.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["frequency, hz"])
+        self.ax.plot(self.TF_Amp_Data.saved_data["Time, s"], self.TF_Amp_Data.saved_data["Amplitude, nA"])
+        self.ay.plot(self.TF_Amp_Data.saved_data["Time, s"], self.TF_Amp_Data.saved_data["Frequency, hz"])
+        self.ax.plot(self.TF_Amp_Data.data["Time, s"], self.TF_Amp_Data.data["Amplitude, nA"])
+        self.ay.plot(self.TF_Amp_Data.data["Time, s"], self.TF_Amp_Data.data["Frequency, hz"])
         self.ax.set_title("Amplitude Tracking")
         self.ax.set_xlabel("Time")
-        self.ax.set_ylabel("amplitude, nA")
-        self.ay.set_ylabel("frequency, Hz")
+        self.ax.set_ylabel("Amplitude, nA")
+        self.ay.set_ylabel("Frequency, Hz")
         
         # Second Graph
-        self.ax2.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["temperature, K"])
-        self.ay2.plot(self.TF_Amp_Data.saved_data["time, s"], self.TF_Amp_Data.saved_data["frequency, hz"])
-        self.ax2.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["temperature, K"])
-        self.ay2.plot(self.TF_Amp_Data.data["time, s"], self.TF_Amp_Data.data["frequency, hz"])
+        self.ax2.plot(self.TF_Amp_Data.saved_data["Time, s"], self.TF_Amp_Data.saved_data["Temperature, K"])
+        self.ay2.plot(self.TF_Amp_Data.saved_data["Time, s"], self.TF_Amp_Data.saved_data["Frequency, hz"])
+        self.ax2.plot(self.TF_Amp_Data.data["Time, s"], self.TF_Amp_Data.data["Temperature, K"])
+        self.ay2.plot(self.TF_Amp_Data.data["Time, s"], self.TF_Amp_Data.data["Frequency, hz"])
         self.ax2.set_title("Temperature")
         self.ax2.set_xlabel("Time")
         self.ax2.set_ylabel("Temperature, K")
-        self.ay2.set_ylabel("frequency, Hz")
+        self.ay2.set_ylabel("Frequency, Hz")
         
         try:
-            time0, time1 = self.TF_Amp_Data.data["time, s"][0], self.TF_Amp_Data.data["time, s"][-1]
+            total_time = self.TF_Amp_Data.saved_data["Time, s"] + self.TF_Amp_Data.data["Time, s"]
+            time0, time1 = total_time[0], total_time[-1]
             ticks_to_hours(self.ay, time0, time1)
             ticks_to_hours(self.ay2, time0, time1)
         except:
@@ -840,7 +882,7 @@ class tkApp(tk.Tk):
         self.run = False
         self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
         if tk.messagebox.askokcancel("Clear Graphs", "Confirm"):
-            self.TFdata.daily_save()
+            self.save_data(ForceDaily=True)
             self.TFdata.store_last_sweep([])
             self.graph_fits()
             self.graph_sweep()
@@ -909,21 +951,8 @@ class tkApp(tk.Tk):
         else:
             self.savegraph(num=num+1)
             
-    def save_data(self):
-        if (time.time()-self.TFdata.last_save)/60 > self.save_interval:
-            try:
-                self.TFdata.save_fits()
-                logging.info("Hourly Fit Data Save Success")
-            except:
-                logging.warning("Hourly Fit Data Save Failure")
-                self.TFdata.reset_save_time()
-            try:
-                self.TF_Amp_Data.save_data()
-                logging.info("Hourly TF_Amp_Data Save Success")
-            except:
-                logging.warning("Hourly TF_Amp_Data Save Failure")
-                self.TF_Amp_Data.reset_save_time()
-        elif (time.time()-self.TFdata.timestamp_today) > 24*60*60:
+    def save_data(self, ForceDaily=False):
+        if (time.time()-self.TFdata.timestamp_today) > 24*60*60 or ForceDaily:
             try:
                 self.savegraph()
             except:
@@ -939,6 +968,21 @@ class tkApp(tk.Tk):
                 logging.info("Daily TF_Amp_Data Save Success")
             except:
                 logging.warning("Daily TF_Amp_Data Save Failure")
+        elif (time.time()-self.TFdata.last_save)/60 > self.save_interval:
+            try:
+                # self.TFdata.save_fits()
+                self.TFdata.save_fit_data()
+                logging.info("Hourly Fit Data Save Success")
+            except:
+                logging.warning("Hourly Fit Data Save Failure")
+                self.TFdata.reset_save_time()
+            try:
+                self.TF_Amp_Data.save_data()
+                logging.info("Hourly TF_Amp_Data Save Success")
+            except:
+                logging.warning("Hourly TF_Amp_Data Save Failure")
+                self.TF_Amp_Data.reset_save_time()
+        
 
     def start(self):
         self.start_button.config(text="Stop", bg="red", fg="white", command=self.stop)
@@ -953,14 +997,13 @@ class tkApp(tk.Tk):
             if self.data_mode.get() == "Frequency Sweep":
                 try:
                     good_sweep = self.full_sweep()
-                    self.graph_fits()
+                    self.graph_data()
                     self.save_data()                  
                 except Exception as e1:
                     logging.warning(e1)
                     traceback.print_exc()
                     if self.run:
-                        self.TFdata.save_fits()
-                        self.TF_Amp_Data.save_data()
+                        self.save_data(ForceDaily=True)
                         self.run = False
                         try:
                             self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
@@ -974,10 +1017,10 @@ class tkApp(tk.Tk):
                         self.wait_in_ms(self.params["Wait Time, ms"])
                         Vx, Vy = self.lockin.Read_XY()
                         self.TF_Amp_Data.append_data(time.time(), np.sqrt(Vx**2 + Vy**2), self.gen.Get_Frequency())
-                        amp_tracking = amplitude_tracker(self.TF_Amp_Data.data["frequency, hz"][-1], self.TF_Amp_Data.data["amplitude, nA"][-1])
+                        amp_tracking = amplitude_tracker(self.TF_Amp_Data.data["Frequency, hz"][-1], self.TF_Amp_Data.data["Amplitude, nA"][-1], self.TF_Amp_Data.data["Drive, V"][-1])
                         if amp_tracking[0]:
                             self.gen.Set_Frequency(amp_tracking[1])
-                        self.graph_amplitude()
+                        self.graph_data()
                     else:
                         good_sweep = self.full_sweep()
                         if good_sweep:
@@ -990,8 +1033,7 @@ class tkApp(tk.Tk):
                     logging.warning(e2)
                     traceback.print_exc()
                     if self.run:
-                        self.TFdata.save_fits()
-                        self.TF_Amp_Data.save_data()
+                        self.save_data(ForceDaily=True)
                         self.run = False
                         try:
                             self.start_button.config(text="Start Sweep", bg="green", fg="white", command=self.start)
@@ -1012,7 +1054,7 @@ class tkApp(tk.Tk):
         self.quit()     # stops mainloop
         self.destroy()  # this is necessary on Windows to prevent
                         # Fatal Python Error: PyEval_RestoreThread: NULL tstate
-        self.TFdata.save_fits()
+        self.save_data(ForceDaily=True)
         
 if __name__ == "__main__":
     if os.getcwd().split("\\")[-1] == "TF-Monitor-Interface":

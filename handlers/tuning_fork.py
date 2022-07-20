@@ -27,12 +27,47 @@ class TFdata:
         x_header = "\tx:Frequency, Hz\tx:Amplitude, V\tx:Width, Hz\tx:Phase, Rad\tx:Background intercept, V\tx:Background slope, dV/df\tx:Background quadratic, d2V/d2f"
         y_header = "\ty:Frequency, Hz\ty:Amplitude, V\ty:Width, Hz\ty:Phase, Rad\ty:Background intercept, V\ty:Background slope, dV/df\ty:Background quadratic, d2V/d2f"
         self.header = "Time, s\tDrive, V\tCurrent Amp\tTemperature, K"+x_header+y_header
+        
+        self.Vx_names = ["x:Frequency, Hz", "x:Amplitude, V", "x:Width, Hz", "x:Phase, Rad", 
+                    "x:Background intercept, V", "x:Background slope, dV/df", "x:Background quadratic, d2V/d2f"]
+        self.Vy_names = ["y:Frequency, Hz", "y:Amplitude, V", "y:Width, Hz", "y:Phase, Rad", 
+                    "y:Background intercept, V", "y:Background slope, dV/df", "y:Background quadratic, d2V/d2f"]
+        
         self.sweep_header = "Time, s\tFrequency, hz\tVx, V\tVy, V\tDrive, V\tCurrent Amp"
         self.reset_sweep()
         self.reset_fits()
         self.reset_saved_fits()
+        self.reset_fit_data()
+        self.reset_saved_fit_data()
         self.reset_save_time()
         
+        
+    def reset_fit_data(self):
+        self.fit_data = {"Time, s": [],
+                         "Drive, V": [],
+                         "Current Amp": [],
+                         "Temperature, K": []
+                         }
+        for thing in self.Vx_names:
+            self.fit_data[thing] = []
+        for thing in self.Vy_names:
+            self.fit_data[thing] = []
+            
+    def reset_saved_fit_data(self):
+        self.saved_fit_data = {"Time, s": [],
+                         "Drive, V": [],
+                         "Current Amp": [],
+                         "Temperature, K": []
+                         }
+        for thing in self.Vx_names:
+            self.saved_fit_data[thing] = []
+        for thing in self.Vy_names:
+            self.saved_fit_data[thing] = []
+    
+    def append_fit_data(self, new_data):
+        for i, key in enumerate(self.fit_data):
+            self.fit_data[key].append(new_data[i])
+
         
     def get_today(self):
         now = datetime.now()
@@ -59,10 +94,13 @@ class TFdata:
         self.saved_fits = np.array([])
         
     def daily_save(self):
-        self.save_fits()
+        # self.save_fits()
+        self.save_fit_data()
         self.reset_save_time()
-        self.reset_fits()
-        self.reset_saved_fits()
+        # self.reset_fits()
+        # self.reset_saved_fits()
+        self.reset_fit_data()
+        self.reset_saved_fit_data()
         self.get_today()
         
     def reset_sweep(self):
@@ -76,7 +114,6 @@ class TFdata:
         if np.array(new_values).ndim == 1: 
             self.fits.append(new_values)
             
-            
     def fit_sweep(self):
         self.sweep = np.array(self.sweep)
         self.store_last_sweep(self.sweep)
@@ -89,7 +126,8 @@ class TFdata:
             
             if xflag in [1,2,3,4]:
                 self.T = Meas_Temp(width=self.xfit[2], frequency=self.xfit[0])
-                self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
+                # self.append_fits([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
+                self.append_fit_data([self.sweep[:, 0].mean(), self.drive, self.current_amp, self.T, *self.xfit, *self.yfit])
                 return xflag
             else:
                 return 0
@@ -107,8 +145,8 @@ class TFdata:
     def update_recent_temp_file(self):
         file_loc = r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\TF_Temperature.dat"
         try:
-            if self.TFdata.fits[-1][4] > self.frequency_limit:
-                np.savetxt(file_loc, np.array([self.fits[-1][0], self.fits[-1][3]]), delimiter='\t', header='Time, s\tTemperature, K')
+            if self.fit_data["x:Frequency, Hz"][-1] > self.frequency_limit:
+                np.savetxt(file_loc, np.array([self.fit_data["Time, s"][-1], self.fit_data["Temperature, K"][-1]]), delimiter='\t', header='Time, s\tTemperature, K')
         except:
             pass
         
@@ -119,9 +157,22 @@ class TFdata:
                 np.savetxt(fname, np.asarray(self.fits), header=self.header, delimiter='\t')
             else:
                 np.savetxt(fname, np.asarray(self.fits), delimiter='\t')
-            self.saved_fits = np.concatenate((self.saved_fits, np.asarray(self.fits)), axis=0)
+            if self.saved_fits.ndim == 2:
+                self.saved_fits = np.concatenate((self.saved_fits, np.asarray(self.fits)), axis=0)
+            elif self.saved_fits.ndim < 2:
+                self.saved_fits = np.array(self.fits)
+                
             self.reset_fits()
             self.reset_save_time()
+    
+    def save_fit_data(self):
+        if len(self.fit_data["Time, s"]) > 0:
+            fname = self.getfilename(self.save_folder+"/fits_{}".format(self.today), "{}_fits_{}".format(self.TF_name, self.today))
+            pd.DataFrame(self.fit_data).to_csv(fname, sep='\t', index=False)
+            for key in self.saved_fit_data:
+                self.saved_fit_data[key] = self.saved_fit_data[key] + self.fit_data[key] 
+            self.reset_fit_data()
+        self.reset_save_time()
             
     def save_sweep(self):
         fname = self.getfilename(self.save_folder+"/sweeps_{}".format(self.today), "{}_{}".format(self.TF_name, self.today))
@@ -138,7 +189,7 @@ class TF_Amp_Data:
         self.TF_name = TF_name
         self.save_folder = save_folder
         self.get_today()
-        self.reset_sweep_time()
+        self.last_sweep_time = time.time() - 60*60
         self.set_drive(1)
         self.set_current_amp(1)
         self.reset_data()
@@ -147,22 +198,22 @@ class TF_Amp_Data:
         
     def reset_data(self):
         self.data = {
-            "time, s": [],
-            "frequency, hz": [],
-            "amplitude, nA": [],
-            "temperature, K": [],
-            "drive, V": [],
-            "current amplifier": []
+            "Time, s": [],
+            "Frequency, hz": [],
+            "Amplitude, nA": [],
+            "Temperature, K": [],
+            "Drive, V": [],
+            "Current Amplifier": []
             }
         
     def reset_saved_data(self):
         self.saved_data = {
-            "time, s": [],
-            "frequency, hz": [],
-            "amplitude, nA": [],
-            "temperature, K": [],
-            "drive, V": [],
-            "current amplifier": []
+            "Time, s": [],
+            "Frequency, hz": [],
+            "Amplitude, nA": [],
+            "Temperature, K": [],
+            "Drive, V": [],
+            "Current Amplifier": []
             }
         
     def reset_sweep_time(self):
@@ -192,12 +243,12 @@ class TF_Amp_Data:
         self.current_amp = value
         
     def append_data(self, time, amplitude, frequency):
-        self.data["time, s"].append(time)
-        self.data["amplitude, nA"].append(amplitude*1E9/self.current_amp)
-        self.data["frequency, hz"].append(frequency)
-        self.data["temperature, K"].append(temperature(amplitude))
-        self.data["drive, V"].append(self.drive)
-        self.data["current amplifier"].append(self.current_amp)
+        self.data["Time, s"].append(time)
+        self.data["Amplitude, nA"].append(amplitude*1E9/self.current_amp)
+        self.data["Frequency, hz"].append(frequency)
+        self.data["Temperature, K"].append(temperature(amplitude*1E9/self.current_amp, self.drive))
+        self.data["Drive, V"].append(self.drive)
+        self.data["Current Amplifier"].append(self.current_amp)
     
     def daily_save(self):
         self.save_data()
@@ -206,11 +257,11 @@ class TF_Amp_Data:
         self.get_today()
         
     def save_data(self):
-        fname = self.getfilename(self.save_folder+"/Amplitude_Tracking_{}".format(self.today), "{}_AT_{}".format(self.TF_name, self.today))
-        if len(self.data["time, s"]) > 0:
+        if len(self.data["Time, s"]) > 0:
+            fname = self.getfilename(self.save_folder+"/Amplitude_Tracking_{}".format(self.today), "{}_AT_{}".format(self.TF_name, self.today))
             pd.DataFrame(self.data).to_csv(fname, sep='\t', index=False)
-        for key in self.saved_data:
-            self.saved_data[key] = self.saved_data[key] + self.data[key] 
-        self.reset_data()
+            for key in self.saved_data:
+                self.saved_data[key] = self.saved_data[key] + self.data[key] 
+            self.reset_data()
         self.reset_save_time()
             
