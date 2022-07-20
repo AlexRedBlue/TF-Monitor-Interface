@@ -801,8 +801,8 @@ class tkApp(tk.Tk):
         
         # Second Graph
         self.ax2.plot(self.TFdata.saved_fit_data["Time, s"], self.TFdata.saved_fit_data[self.whichGraph_1.get()])
-        self.ay2.plot(self.TFdata.saved_fit_data["Time, s"], self.TFdata.saved_fit_data[self.whichGraph_1.get()])
-        self.ax2.plot(self.TFdata.fit_data["Time, s"], self.TFdata.fit_data[self.whichGraph_2.get()])
+        self.ay2.plot(self.TFdata.saved_fit_data["Time, s"], self.TFdata.saved_fit_data[self.whichGraph_2.get()])
+        self.ax2.plot(self.TFdata.fit_data["Time, s"], self.TFdata.fit_data[self.whichGraph_1.get()])
         self.ay2.plot(self.TFdata.fit_data["Time, s"], self.TFdata.fit_data[self.whichGraph_2.get()])
         self.ax2.set_title("Fit Values")
         self.ax2.set_xlabel("Time")
