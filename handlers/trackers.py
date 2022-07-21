@@ -328,6 +328,7 @@ class diode_tracker:
                 T = np.nan
         except:
             V = np.nan
+            T = np.nan
         self.data.append([time.time(), V, T])
         try:
             self.update_temperature_file()

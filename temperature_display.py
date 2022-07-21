@@ -161,7 +161,7 @@ class tkApp(tk.Tk):
             label = "{:.1f}".format(T*10**power)
             units = " uK"
         else:
-            power = 1
+            power = 0
             label = ""
             units = ""
         return label, units, power
