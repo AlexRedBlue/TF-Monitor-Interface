@@ -323,11 +323,20 @@ class mainwindow_tkApp(tk.Tk):
         while self.on:
             try:
                 if self.run_R8:
-                    self.R8_tracker.take_data()
+                    try:
+                        self.R8_tracker.take_data()
+                    except:
+                        self.switch_off_R8()
                 if self.run_mct:
-                    self.mct_tracker.take_data()
+                    try:
+                        self.mct_tracker.take_data()
+                    except:
+                        self.switch_off_MCT()
                 if self.run_diode:
-                    self.diode_tracker.take_data()
+                    try: 
+                        self.diode_tracker.take_data()
+                    except:
+                        self.switch_off_diode()
                     
                 update_time_left = 1000
                 update_frequency = 250
@@ -374,26 +383,34 @@ class mainwindow_tkApp(tk.Tk):
                     traceback.print_exc()
                 if self.run_R8:
                     self.R8_tracker.save_data()
-                    self.run_R8 = False
-                    try:
-                        self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
-                    except Exception as e:
-                        print(e)
+                    self.switch_off_R8()
                 if self.run_mct:
                     self.mct_tracker.save_data()
-                    self.run_mct = False
-                    try:
-                        self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
-                    except Exception as e:
-                        print(e)
+                    self.switch_off_MCT()
                 if self.run_diode:
                     self.diode_tracker.save_data()
-                    self.run_diode = False
-                    try:
-                        self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
-                    except Exception as e:
-                        print(e)
-
+                    self.switch_off_diode()
+                        
+        def switch_off_R8(self):
+            self.run_R8 = False
+            try:
+                self.R8_start_button.config(text="Start R8", bg="green", fg="white", command=self.start_R8_thread)
+            except Exception as e:
+                print(e)
+        
+        def switch_off_MCT(self):
+            self.run_mct = False
+            try:
+                self.mct_start_button.config(text="Start MCT", bg="green", fg="white", command=self.start_mct_thread)
+            except Exception as e:
+                print(e)
+        
+        def switch_off_diode(self):
+            self.run_diode = False
+            try:
+                self.diode_start_button.config(text="Start Diode", bg="green", fg="white", command=self.stop_diode_thread)
+            except Exception as e:
+                print(e)
         
 if __name__ == "__main__":
     App = mainwindow_tkApp()

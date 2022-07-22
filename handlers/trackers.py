@@ -168,9 +168,13 @@ class lakeshore_tracker:
         self.today = self.today.strftime("%Y-%m-%d")       
     
     def update_temperature_file(self):
-        current_temp, bound = self.get_current_temp(self.data[-1][1], 1)
-        np.savetxt(r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\R8_temp.dat", np.array([self.data[-1][0], current_temp]), header = "Time, s\tTemperature, K")
-    
+        try:
+            current_temp, bound = self.get_current_temp(self.data[-1][1], 1)
+            if current_temp < 0.800 and current_temp > 0.010:
+                np.savetxt(r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\R8_temp.dat", np.array([self.data[-1][0], current_temp]), header = "Time, s\tTemperature, K")
+        except:
+            pass
+            
     # def get_current_temp(self, resistance, channel):
     #     if channel==1:
     #         temp = np.interp(resistance, (self.R8_calibration[:, 0])[self.R8_sorted], (self.R8_calibration[:, 1])[self.R8_sorted])
@@ -315,8 +319,12 @@ class diode_tracker:
     def update_temperature_file(self):
         T = self.data[-1][2]
         time = self.data[-1][0]
-        np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\diode_temp.dat", X=[time, T], delimiter='\t', header="Time, s\tTemperature, K")
-    
+        try:
+            if T > 1:
+                np.savetxt(fname=r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\diode_temp.dat", X=[time, T], delimiter='\t', header="Time, s\tTemperature, K")
+        except:
+            pass
+        
     def take_data(self):
         # TODO
         # Read data from multimeter

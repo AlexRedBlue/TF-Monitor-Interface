@@ -145,7 +145,7 @@ class TFdata:
     def update_recent_temp_file(self):
         file_loc = r"C:\Users\physics-svc-mkdata\Documents\recent_temperature\TF_Temperature.dat"
         try:
-            if self.fit_data["x:Frequency, Hz"][-1] > self.frequency_limit:
+            if self.fit_data["x:Frequency, Hz"][-1] < self.frequency_limit:
                 np.savetxt(file_loc, np.array([self.fit_data["Time, s"][-1], self.fit_data["Temperature, K"][-1]]), delimiter='\t', header='Time, s\tTemperature, K')
         except:
             pass
